@@ -1,6 +1,6 @@
 # Elm tools
-Tools for querying and manipulating elm files.
-Focussed on vim support.
+As a Vim and Elm enthousiast, I'd like to improve the quality of the tools available for writing Elm in Vim.
+This repo is the home of my experiments.
 
 ## Similar
 - [ElmJutsu](https://atom.io/packages/elmjutsu)
