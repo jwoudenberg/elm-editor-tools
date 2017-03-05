@@ -5,24 +5,29 @@ module Lib
 import Text.ParserCombinators.Parsec
 import Text.Parsec.String
 import Data.Maybe
+import Data.List
+import Debug.Trace
 
-type Import = String
+data Info
+    = Import String
+    | Definition String
+    deriving (Show)
 
-elmParser :: String -> IO (Either ParseError [Import])
+elmParser :: String -> IO (Either ParseError [Info])
 elmParser fileName =
     parseFromFile umports fileName
 
-umports :: GenParser Char st [Import]
+umports :: GenParser Char st [Info]
 umports = do
     result <- catMaybes <$> many line
     eof
     return result
 
-
-line :: GenParser Char st (Maybe Import)
+line :: GenParser Char st (Maybe Info)
 line = do
     choice
         [ Just <$> try umport
+        , Just <$> try definition
         , do
             anyLine
             return Nothing
@@ -30,18 +35,38 @@ line = do
 
 anyLine :: GenParser Char st String
 anyLine = do
-    line <- many (noneOf "\n")
-    newline
-    return line
+    manyTill anyChar newline
 
-umport :: GenParser Char st Import
+umport :: GenParser Char st Info
 umport = do
     string "import"
     spaces
     name <- moduleName
     spaces
-    return name
+    return (Import name)
 
 moduleName :: GenParser Char st String
 moduleName = do
     manyTill anyChar space
+
+definition :: GenParser Char st Info
+definition = do
+    name <- operator <|> lowerCasedWord
+    spaces
+    char ':'
+    return (Definition name)
+
+lowerCasedWord :: GenParser Char st String
+lowerCasedWord = do
+    initial <- lower
+    rest <- many letter
+    return (initial : rest)
+
+operator :: GenParser Char st String
+operator = do
+    char '('
+    spaces
+    op <- many1 (noneOf ")")
+    spaces
+    char ')'
+    return op
