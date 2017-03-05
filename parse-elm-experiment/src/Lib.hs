@@ -8,7 +8,13 @@ import Data.Maybe
 import Data.List
 import Debug.Trace
 
-data Definition = Definition String deriving (Show)
+data Definition = Definition
+    { name :: String
+    , fileName :: String
+    , line :: Int
+    , column :: Int
+    }
+    deriving (Show)
 
 elmParser :: String -> IO (Either ParseError [Definition])
 elmParser fileName =
@@ -16,12 +22,12 @@ elmParser fileName =
 
 definitions :: GenParser Char st [Definition]
 definitions = do
-    result <- catMaybes <$> many line
+    result <- catMaybes <$> many line_
     eof
     return result
 
-line :: GenParser Char st (Maybe Definition)
-line = do
+line_ :: GenParser Char st (Maybe Definition)
+line_ = do
     choice
         [ Just <$> try definition
         , do
@@ -35,10 +41,16 @@ anyLine = do
 
 definition :: GenParser Char st Definition
 definition = do
+    sourcePos <- getPosition
     name <- operator <|> lowerCasedWord
     spaces
     char ':'
-    return (Definition name)
+    return (Definition
+        { name = name
+        , fileName = sourceName sourcePos
+        , line = sourceLine sourcePos
+        , column = sourceColumn sourcePos
+        })
 
 lowerCasedWord :: GenParser Char st String
 lowerCasedWord = do
