@@ -8,26 +8,22 @@ import Data.Maybe
 import Data.List
 import Debug.Trace
 
-data Info
-    = Import String
-    | Definition String
-    deriving (Show)
+data Definition = Definition String deriving (Show)
 
-elmParser :: String -> IO (Either ParseError [Info])
+elmParser :: String -> IO (Either ParseError [Definition])
 elmParser fileName =
-    parseFromFile umports fileName
+    parseFromFile definitions fileName
 
-umports :: GenParser Char st [Info]
-umports = do
+definitions :: GenParser Char st [Definition]
+definitions = do
     result <- catMaybes <$> many line
     eof
     return result
 
-line :: GenParser Char st (Maybe Info)
+line :: GenParser Char st (Maybe Definition)
 line = do
     choice
-        [ Just <$> try umport
-        , Just <$> try definition
+        [ Just <$> try definition
         , do
             anyLine
             return Nothing
@@ -37,19 +33,7 @@ anyLine :: GenParser Char st String
 anyLine = do
     manyTill anyChar newline
 
-umport :: GenParser Char st Info
-umport = do
-    string "import"
-    spaces
-    name <- moduleName
-    spaces
-    return (Import name)
-
-moduleName :: GenParser Char st String
-moduleName = do
-    manyTill anyChar space
-
-definition :: GenParser Char st Info
+definition :: GenParser Char st Definition
 definition = do
     name <- operator <|> lowerCasedWord
     spaces
