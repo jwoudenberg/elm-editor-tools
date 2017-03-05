@@ -22,7 +22,7 @@ umports = do
 line :: GenParser Char st (Maybe Import)
 line = do
     choice
-        [ Just <$> umport
+        [ Just <$> try umport
         , do
             anyLine
             return Nothing
@@ -31,19 +31,17 @@ line = do
 anyLine :: GenParser Char st String
 anyLine = do
     line <- many (noneOf "\n")
-    eol
+    newline
     return line
 
 umport :: GenParser Char st Import
 umport = do
-    string "import "
+    string "import"
+    spaces
     name <- moduleName
-    eol
+    spaces
     return name
 
 moduleName :: GenParser Char st String
 moduleName = do
-    many (noneOf "\n ")
-
-eol :: GenParser Char st Char
-eol = char '\n'
+    manyTill anyChar space

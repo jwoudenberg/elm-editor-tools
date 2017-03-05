@@ -1,15 +1,16 @@
 module Main where
 
 import Lib
-
-input :: String
-input =
-  "import Foo\n\
-  \I can just write stuff here without effect\n\
-  \import Bar\n\
-  \import Test.Something\n"
+import System.Environment
 
 main :: IO ()
 main = do
-  result <- elmParser  "/Users/jasper/projects/elm-editor-tools/parse-elm-experiment/app/test.elm"
+  files <- getArgs
+  traverse parseFile files
+  return ()
+
+parseFile :: String -> IO ()
+parseFile fileName = do
+  result <- elmParser fileName
+  putStrLn ("\n# " ++ fileName)
   putStrLn (show $ result)
