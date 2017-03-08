@@ -27,15 +27,46 @@ This repo is the home of my experiments.
 ## Features
 These are ordered in decreasing priority for me personally.
 - Jump to file
+  - Requires file resolving
 - Jump to definition
+  - Requires definition parsing
 - Jump to documentation (optionally inline like a vim help file)
 - Find usages
+  - Requires project crawling (use tool like ag or pt for finding candidates?)
 - Fix case statements after expanding a union type
+  - Requires some type inference (if I'm casing on `foo.bar`, I need to be able to know the type of `bar`)
 - Add documentation comments to current module
 - Autocompletion (based on types)
+  - Requires type inference
 - Show type of variable
+  - Requires type inference
 - Sort imports
 - (Un)expose a declaration from a module
 
-## Steps
-- Parser to generate elm tag files, learn about parsers in the process.
+## Techniques
+
+### File Resolving
+- Already did this once in Vimscript
+
+### Definition parsing
+Multiple options:
+- Parse elm interface files
+  - Does this work for local (`let, in`) or unexported definitions?
+  - Requires a recent compilation for best results.
+  - Probably faster though.
+- Selectively parse all definitions out of a file
+  - `foo = ...`, `type Foo = A | B`, `type alias Foo = ...`
+  - ignore other constructs for speed, and to succeed even if the surrounding code is invalid.
+  - Fully qualify definitions: `foo` to `My.Module.foo`
+  - Parse what's imported and exposed
+  - Determine the scope of a definition (exported, top level or `let, in`)
+  - If easy, extract the full code of the definition unparsed for later analysis.
+
+### Crawl project for usages
+- Perhaps use a tool like ag or pt to create an initial pool of candidates?
+  - Given a fully quaifified definition `My.Module.foo`, any candidate file will always contain both the namespace `My.Module` and the unqualified definition `foo`.
+- Check if each candidate file actually exposes the definition.
+- Do not forget module including definition itself.
+
+## Next steps
+- Let's start with looking at definitions
