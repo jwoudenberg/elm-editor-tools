@@ -1,24 +1,28 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Lib
     ( elmParser
     ) where
 
-import Text.ParserCombinators.Parsec
-import Text.Parsec.String
-import Data.Maybe
+import Data.Aeson
 import Data.List
+import Data.Maybe
 import Debug.Trace
+import GHC.Generics
+import Text.Parsec.String
+import Text.ParserCombinators.Parsec
 
 data Definition = Definition
     { name :: String
     , fileName :: String
     , line :: Int
     , column :: Int
-    }
-    deriving (Show)
+    } deriving (Generic, Show)
+
+instance ToJSON Definition
 
 elmParser :: String -> IO (Either ParseError [Definition])
-elmParser fileName =
-    parseFromFile definitions fileName
+elmParser fileName = parseFromFile definitions fileName
 
 definitions :: GenParser Char st [Definition]
 definitions = do
@@ -30,9 +34,8 @@ line_ :: GenParser Char st (Maybe Definition)
 line_ = do
     choice
         [ Just <$> try definition
-        , do
-            anyLine
-            return Nothing
+        , do anyLine
+             return Nothing
         ]
 
 anyLine :: GenParser Char st String
@@ -45,12 +48,13 @@ definition = do
     name <- operator <|> lowerCasedWord
     spaces
     char ':'
-    return (Definition
-        { name = name
-        , fileName = sourceName sourcePos
-        , line = sourceLine sourcePos
-        , column = sourceColumn sourcePos
-        })
+    return
+        (Definition
+         { name = name
+         , fileName = sourceName sourcePos
+         , line = sourceLine sourcePos
+         , column = sourceColumn sourcePos
+         })
 
 lowerCasedWord :: GenParser Char st String
 lowerCasedWord = do
