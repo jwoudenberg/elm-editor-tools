@@ -30,6 +30,7 @@ These are ordered in decreasing priority for me personally.
 - Jump to definition
 - Jump to documentation (optionally inline like a vim help file)
 - Find usages
+- Fix case statements after expanding a union type
 - Add documentation comments to current module
 - Autocompletion (based on types)
 - Show type of variable
