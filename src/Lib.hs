@@ -2,6 +2,8 @@
 
 module Lib
     ( elmParser
+    , parseString
+    , Definition(..)
     ) where
 
 import Data.Aeson
@@ -17,12 +19,15 @@ data Definition = Definition
     , fileName :: String
     , line :: Int
     , column :: Int
-    } deriving (Generic, Show)
+    } deriving (Generic, Show, Eq)
 
 instance ToJSON Definition
 
 elmParser :: String -> IO (Either ParseError [Definition])
 elmParser fileName = parseFromFile definitions fileName
+
+parseString :: String -> String -> Either ParseError [Definition]
+parseString fileName fileContent = parse definitions fileName fileContent
 
 definitions :: GenParser Char st [Definition]
 definitions = do
