@@ -31,21 +31,17 @@ parseString fileName fileContent = parse definitions fileName fileContent
 
 definitions :: GenParser Char st [Definition]
 definitions = do
-    result <- catMaybes <$> many line_
-    eof
+    result <- catMaybes <$> manyTill line_ eof
     return result
 
 line_ :: GenParser Char st (Maybe Definition)
 line_ = do
-    choice
-        [ Just <$> try definition
-        , do anyLine
-             return Nothing
-        ]
+    spaces
+    choice [Just <$> try definition, anyLine >> return Nothing]
 
 anyLine :: GenParser Char st String
 anyLine = do
-    manyTill anyChar newline
+    manyTill anyChar (newline <|> (eof >> return 'x'))
 
 definition :: GenParser Char st Definition
 definition = do
