@@ -10,8 +10,8 @@ module Lib
 
 import Data.Aeson
 import Data.List
+import Text.Parsec
 import Text.Parsec.String
-import Text.ParserCombinators.Parsec
 
 data Location = Location
     { fileName :: String
@@ -58,8 +58,7 @@ line_ = do
     choice [pure <$> try topFunction, try sumType, anyLine >> return []]
 
 anyLine :: GenParser Char st String
--- TODO: replace newline with endOfLine
-anyLine = manyTill anyChar (newline <|> (eof >> return 'x'))
+anyLine = manyTill anyChar (endOfLine <|> (eof >> return 'x'))
 
 topFunction :: GenParser Char st Definition
 topFunction = do
