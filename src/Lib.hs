@@ -62,7 +62,7 @@ anyLine = manyTill anyChar (endOfLine <|> (eof >> return 'x'))
 
 topFunction :: GenParser Char st Definition
 topFunction = do
-    location <- toLocation <$> getPosition
+    location <- getLocation
     name <- operator <|> lowerCasedWord
     spaces
     _ <- char ':'
@@ -86,18 +86,20 @@ typeDefinition = do
 
 typeConstructor :: GenParser Char st Definition
 typeConstructor = do
-    location <- toLocation <$> getPosition
+    location <- getLocation
     name <- capitalizedWord
     optional $ spaces1 >> sepBy lowerCasedWord spaces1
     return (TypeConstructor name location)
 
-toLocation :: SourcePos -> Location
-toLocation sourcePos =
-    Location
-    { fileName = sourceName sourcePos
-    , line = sourceLine sourcePos
-    , column = sourceColumn sourcePos
-    }
+getLocation :: GenParser Char st Location
+getLocation = do
+    sourcePos <- getPosition
+    pure $
+        Location
+        { fileName = sourceName sourcePos
+        , line = sourceLine sourcePos
+        , column = sourceColumn sourcePos
+        }
 
 lowerCasedWord :: GenParser Char st String
 lowerCasedWord = do
