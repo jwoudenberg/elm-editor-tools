@@ -52,6 +52,10 @@ sumTypeTests =
         "followed by top level function"
         "type Foo = Bar\nfoo : Int"
         [typeConstructor "Bar" 1 12, topFunction "foo" 2 1]
+    -- , t
+    --     "with type parameters"
+    --     "type Foo = Bar a | Baz one Two"
+    --     [typeConstructor "Foo" 1 12, typeConstructor "Baz" 1 20]
     ]
 
 topFunction :: String -> Int -> Int -> Definition

@@ -11,7 +11,7 @@ module Lib
 import Data.Aeson
 import Data.List
 import Text.Parsec
-import Text.Parsec.String
+import Text.Parsec.Indent
 
 data Location = Location
     { fileName :: String
@@ -42,13 +42,16 @@ instance ToJSON Definition where
             , "column" .= column location
             ]
 
-type DefParser result = GenParser Char () result
+type DefParser result = IndentParser String () result
 
 elmParser :: String -> IO (Either ParseError [Definition])
-elmParser fileName_ = parseFromFile definitions fileName_
+elmParser fileName_ = do
+    input <- readFile fileName_
+    return (parseString fileName_ input)
 
 parseString :: String -> String -> Either ParseError [Definition]
-parseString fileName_ fileContent = parse definitions fileName_ fileContent
+parseString fileName_ fileContent =
+    runIndentParser definitions () fileName_ fileContent
 
 definitions :: DefParser [Definition]
 definitions = do
