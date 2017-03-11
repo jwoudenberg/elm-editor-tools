@@ -42,25 +42,27 @@ instance ToJSON Definition where
             , "column" .= column location
             ]
 
+type DefParser result = GenParser Char () result
+
 elmParser :: String -> IO (Either ParseError [Definition])
 elmParser fileName_ = parseFromFile definitions fileName_
 
 parseString :: String -> String -> Either ParseError [Definition]
 parseString fileName_ fileContent = parse definitions fileName_ fileContent
 
-definitions :: GenParser Char st [Definition]
+definitions :: DefParser [Definition]
 definitions = do
     result <- mconcat <$> manyTill line_ eof
     return result
 
-line_ :: GenParser Char st [Definition]
+line_ :: DefParser [Definition]
 line_ = do
     choice [pure <$> try topFunction, try sumType, anyLine >> return []]
 
-anyLine :: GenParser Char st String
+anyLine :: DefParser String
 anyLine = manyTill anyChar (endOfLine <|> (eof >> return 'x'))
 
-topFunction :: GenParser Char st Definition
+topFunction :: DefParser Definition
 topFunction = do
     location <- getLocation
     name <- operator <|> lowerCasedWord
@@ -68,7 +70,7 @@ topFunction = do
     _ <- char ':'
     return (TopFunction name location)
 
-sumType :: GenParser Char st [Definition]
+sumType :: DefParser [Definition]
 sumType = do
     _ <- string "type"
     spaces1
@@ -78,20 +80,20 @@ sumType = do
     spaces
     sepBy typeConstructor (spaces >> char '|' >> spaces)
 
-typeDefinition :: GenParser Char st String
+typeDefinition :: DefParser String
 typeDefinition = do
     baseType <- capitalizedWord
     typeParams <- optionMaybe $ try $ spaces1 >> sepBy lowerCasedWord spaces1
     return $ concat $ intersperse " " $ baseType : (maybe [] id typeParams)
 
-typeConstructor :: GenParser Char st Definition
+typeConstructor :: DefParser Definition
 typeConstructor = do
     location <- getLocation
     name <- capitalizedWord
     optional $ spaces1 >> sepBy lowerCasedWord spaces1
     return (TypeConstructor name location)
 
-getLocation :: GenParser Char st Location
+getLocation :: DefParser Location
 getLocation = do
     sourcePos <- getPosition
     pure $
@@ -101,19 +103,19 @@ getLocation = do
         , column = sourceColumn sourcePos
         }
 
-lowerCasedWord :: GenParser Char st String
+lowerCasedWord :: DefParser String
 lowerCasedWord = do
     initial <- lower
     rest <- many letter
     return (initial : rest)
 
-capitalizedWord :: GenParser Char st String
+capitalizedWord :: DefParser String
 capitalizedWord = do
     initial <- upper
     rest <- many letter
     return (initial : rest)
 
-operator :: GenParser Char st String
+operator :: DefParser String
 operator = do
     _ <- char '('
     spaces
@@ -122,5 +124,5 @@ operator = do
     _ <- char ')'
     return op
 
-spaces1 :: GenParser Char st ()
+spaces1 :: DefParser ()
 spaces1 = space >> spaces >> pure ()
