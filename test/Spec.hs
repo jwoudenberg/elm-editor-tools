@@ -8,24 +8,55 @@ main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests =
+tests = testGroup "parseTests" [topLevelFunctionTests, sumTypeTests]
+
+topLevelFunctionTests :: TestTree
+topLevelFunctionTests =
   testGroup
-    "parseTests"
-    [ t "base case" "foo : Int" [def "foo" 1 1]
-    , t "leading space" " foo : Int" [def "foo" 1 2]
-    , t "leading tab" "\tfoo : Int" [def "foo" 1 9]
-    , t "nowhitespace" "foo:Int" [def "foo" 1 1]
-    , t "much whitespace" "foo   :\tInt" [def "foo" 1 1]
-    , t "broken across lines" "foo \n: Int" [def "foo" 1 1]
-    , t "non-first line" "a line\nanother line\nfoo : Int" [def "foo" 3 1]
+    "top level function"
+    [ t "top level function" "foo : Int" [topFunction "foo" 1 1]
+    , t "no whitespace" "foo:Int" [topFunction "foo" 1 1]
+    , t "much whitespace" "foo   :\tInt" [topFunction "foo" 1 1]
+    , t "broken across lines" "foo \n: Int" [topFunction "foo" 1 1]
+    , t
+        "non-first line"
+        "a line\nanother line\nfoo : Int"
+        [topFunction "foo" 3 1]
     , t
         "tailing content"
         "foo : Int and some more stuff\nanother line"
-        [def "foo" 1 1]
+        [topFunction "foo" 1 1]
     ]
 
-def :: String -> Int -> Int -> Definition
-def name line_ column_ = TopFunction name (Location fileName_ line_ column_)
+sumTypeTests :: TestTree
+sumTypeTests =
+  testGroup
+    "sum type"
+    [ t "sum type" "type Foo = Bar" [typeConstructor "Bar" 1 12]
+    , t
+        "with multiple type constructors"
+        "type Foo = Bar | Baz"
+        [typeConstructor "Bar" 1 12, typeConstructor "Baz" 1 18]
+    , t "no whitespace" "type Foo=Bar" [typeConstructor "Bar" 1 10]
+    , t "much whitespace" "type  Foo  =  Bar" [typeConstructor "Bar" 1 15]
+    , t "broken across lines" "type Foo =\n Bar" [typeConstructor "Bar" 2 2]
+    , t
+        "non-first line"
+        "a line\nanother line\ntype Foo = Bar"
+        [typeConstructor "Bar" 3 12]
+    , t
+        "tailing content"
+        "type Foo = Bar and some more stuff\nanother line"
+        [typeConstructor "Bar" 1 12]
+    ]
+
+topFunction :: String -> Int -> Int -> Definition
+topFunction name line_ column_ =
+  TopFunction name (Location fileName_ line_ column_)
+
+typeConstructor :: String -> Int -> Int -> Definition
+typeConstructor name line_ column_ =
+  TypeConstructor name (Location fileName_ line_ column_)
 
 fileName_ :: String
 fileName_ = "myFile"

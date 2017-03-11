@@ -9,6 +9,7 @@ module Lib
     ) where
 
 import Data.Aeson
+import Data.List
 import Text.Parsec.String
 import Text.ParserCombinators.Parsec
 
@@ -54,10 +55,10 @@ definitions = do
 
 line_ :: GenParser Char st [Definition]
 line_ = do
-    spaces
-    choice [pure <$> try topFunction, anyLine >> return []]
+    choice [pure <$> try topFunction, try sumType, anyLine >> return []]
 
 anyLine :: GenParser Char st String
+-- TODO: replace newline with endOfLine
 anyLine = manyTill anyChar (newline <|> (eof >> return 'x'))
 
 topFunction :: GenParser Char st Definition
@@ -67,6 +68,29 @@ topFunction = do
     spaces
     _ <- char ':'
     return (TopFunction name location)
+
+sumType :: GenParser Char st [Definition]
+sumType = do
+    _ <- string "type"
+    spaces1
+    _ <- typeDefinition
+    spaces
+    _ <- char '='
+    spaces
+    sepBy typeConstructor (spaces >> char '|' >> spaces)
+
+typeDefinition :: GenParser Char st String
+typeDefinition = do
+    baseType <- capitalizedWord
+    typeParams <- optionMaybe $ try $ spaces1 >> sepBy lowerCasedWord spaces1
+    return $ concat $ intersperse " " $ baseType : (maybe [] id typeParams)
+
+typeConstructor :: GenParser Char st Definition
+typeConstructor = do
+    location <- toLocation <$> getPosition
+    name <- capitalizedWord
+    optional $ spaces1 >> sepBy lowerCasedWord spaces1
+    return (TypeConstructor name location)
 
 toLocation :: SourcePos -> Location
 toLocation sourcePos =
@@ -82,6 +106,12 @@ lowerCasedWord = do
     rest <- many letter
     return (initial : rest)
 
+capitalizedWord :: GenParser Char st String
+capitalizedWord = do
+    initial <- upper
+    rest <- many letter
+    return (initial : rest)
+
 operator :: GenParser Char st String
 operator = do
     _ <- char '('
@@ -90,3 +120,6 @@ operator = do
     spaces
     _ <- char ')'
     return op
+
+spaces1 :: GenParser Char st ()
+spaces1 = space >> spaces >> pure ()
