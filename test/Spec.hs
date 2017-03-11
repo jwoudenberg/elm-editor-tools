@@ -17,17 +17,17 @@ topLevelFunctionTests :: TestTree
 topLevelFunctionTests =
   testGroup
     "top level functions"
-    [ t "top level function" "foo : Int" [topFunction "foo" 1 1]
-    , t "no whitespace" "foo:Int" [topFunction "foo" 1 1]
-    , t "much whitespace" "foo   :\tInt" [topFunction "foo" 1 1]
-    , t "broken across lines" "foo :\n Int" [topFunction "foo" 1 1]
+    [ t "top level function" "foo = 42" [topFunction "foo" 1 1]
+    , t "no whitespace" "foo=42" [topFunction "foo" 1 1]
+    , t "much whitespace" "foo   =\t42" [topFunction "foo" 1 1]
+    , t "broken across lines" "foo =\n 42" [topFunction "foo" 1 1]
     , t
         "non-first line"
-        "a line\nanother line\nfoo : Int"
+        "a line\nanother line\nfoo = 42"
         [topFunction "foo" 3 1]
     , t
         "tailing content"
-        "foo : Int and some more stuff\nanother line"
+        "foo = 42 and some more stuff\nanother line"
         [topFunction "foo" 1 1]
     ]
 
@@ -87,19 +87,19 @@ combinationTests =
     "multiple definitions"
     [ t
         "sum type followed by top level function"
-        "type Foo = Bar\nfoo : Int"
+        "type Foo = Bar\nfoo = 42"
         [typeConstructor "Bar" 1 12, topFunction "foo" 2 1]
     , t
         "top level function followed by sum type"
-        "foo : Int\ntype Foo = Bar"
+        "foo = 42\ntype Foo = Bar"
         [topFunction "foo" 1 1, typeConstructor "Bar" 2 12]
     , t
         "top level function followed by type alias"
-        "foo : Int\ntype alias Foo = Bar"
+        "foo = 42\ntype alias Foo = Bar"
         [topFunction "foo" 1 1, typeAlias "Foo" 2 1]
     , t
         "type alias followed by top level function"
-        "type alias Foo = Bar\nfoo : Int"
+        "type alias Foo = Bar\nfoo = 42"
         [typeAlias "Foo" 1 1, topFunction "foo" 2 1]
     , t
         "type alias followed by sum type"

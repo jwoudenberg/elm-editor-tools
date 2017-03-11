@@ -84,13 +84,12 @@ line_
 restOfLine :: DefParser String
 restOfLine = manyTill anyChar endOfFileOrLine
 
--- TODO: match on the function definition, not it's type declaration.
 topFunction :: DefParser Definition
 topFunction = do
     location <- getLocation
     name <- operator <|> lowerCasedWord
     _ <- whitespace
-    _ <- char ':'
+    _ <- char '='
     _ <- restOfLine
     return (TopFunction name location)
 
