@@ -48,6 +48,10 @@ sumTypeTests =
         "tailing content"
         "type Foo = Bar and some more stuff\nanother line"
         [typeConstructor "Bar" 1 12]
+    , t
+        "followed by top level function"
+        "type Foo = Bar\nfoo : Int"
+        [typeConstructor "Bar" 1 12, topFunction "foo" 2 1]
     ]
 
 topFunction :: String -> Int -> Int -> Definition

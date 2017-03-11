@@ -57,10 +57,10 @@ definitions = do
 
 line_ :: DefParser [Definition]
 line_ = do
-    choice [pure <$> try topFunction, try sumType, anyLine >> return []]
+    choice [try sumType, pure <$> try topFunction, restOfLine >> return []]
 
-anyLine :: DefParser String
-anyLine = manyTill anyChar (endOfLine <|> (eof >> return 'x'))
+restOfLine :: DefParser String
+restOfLine = manyTill anyChar endOfFileOrLine
 
 topFunction :: DefParser Definition
 topFunction = do
@@ -68,6 +68,7 @@ topFunction = do
     name <- operator <|> lowerCasedWord
     spaces
     _ <- char ':'
+    _ <- restOfLine
     return (TopFunction name location)
 
 sumType :: DefParser [Definition]
@@ -78,7 +79,10 @@ sumType = do
     spaces
     _ <- char '='
     spaces
-    sepBy typeConstructor (spaces >> char '|' >> spaces)
+    typeConstructors <-
+        sepBy typeConstructor (try $ spaces >> char '|' >> spaces)
+    _ <- restOfLine
+    return typeConstructors
 
 typeDefinition :: DefParser String
 typeDefinition = do
@@ -90,7 +94,7 @@ typeConstructor :: DefParser Definition
 typeConstructor = do
     location <- getLocation
     name <- capitalizedWord
-    optional $ spaces1 >> sepBy lowerCasedWord spaces1
+    optional $ try $ spaces1 >> sepBy lowerCasedWord spaces1
     return (TypeConstructor name location)
 
 getLocation :: DefParser Location
@@ -126,3 +130,6 @@ operator = do
 
 spaces1 :: DefParser ()
 spaces1 = space >> spaces >> pure ()
+
+endOfFileOrLine :: DefParser ()
+endOfFileOrLine = (endOfLine >> pure ()) <|> eof
