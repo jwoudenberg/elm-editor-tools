@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Lib
@@ -8,10 +9,6 @@ module Lib
     ) where
 
 import Data.Aeson
-import Data.List
-import Data.Maybe
-import Debug.Trace
-import GHC.Generics
 import Text.Parsec.String
 import Text.ParserCombinators.Parsec
 
@@ -21,9 +18,11 @@ data Location = Location
     , column :: Int
     } deriving (Show, Eq)
 
-data Definition =
-    TopFunction String
-                Location
+data Definition
+    = TopFunction String
+                  Location
+    | TypeConstructor String
+                      Location
     deriving (Show, Eq)
 
 instance ToJSON Definition where
@@ -34,33 +33,39 @@ instance ToJSON Definition where
             , "line" .= line location
             , "column" .= column location
             ]
+    toJSON (TypeConstructor name location) =
+        object
+            [ "name" .= name
+            , "fileName" .= fileName location
+            , "line" .= line location
+            , "column" .= column location
+            ]
 
 elmParser :: String -> IO (Either ParseError [Definition])
-elmParser fileName = parseFromFile definitions fileName
+elmParser fileName_ = parseFromFile definitions fileName_
 
 parseString :: String -> String -> Either ParseError [Definition]
-parseString fileName fileContent = parse definitions fileName fileContent
+parseString fileName_ fileContent = parse definitions fileName_ fileContent
 
 definitions :: GenParser Char st [Definition]
 definitions = do
-    result <- catMaybes <$> manyTill line_ eof
+    result <- mconcat <$> manyTill line_ eof
     return result
 
-line_ :: GenParser Char st (Maybe Definition)
+line_ :: GenParser Char st [Definition]
 line_ = do
     spaces
-    choice [Just <$> try topFunction, anyLine >> return Nothing]
+    choice [pure <$> try topFunction, anyLine >> return []]
 
 anyLine :: GenParser Char st String
-anyLine = do
-    manyTill anyChar (newline <|> (eof >> return 'x'))
+anyLine = manyTill anyChar (newline <|> (eof >> return 'x'))
 
 topFunction :: GenParser Char st Definition
 topFunction = do
     location <- toLocation <$> getPosition
     name <- operator <|> lowerCasedWord
     spaces
-    char ':'
+    _ <- char ':'
     return (TopFunction name location)
 
 toLocation :: SourcePos -> Location
@@ -79,9 +84,9 @@ lowerCasedWord = do
 
 operator :: GenParser Char st String
 operator = do
-    char '('
+    _ <- char '('
     spaces
     op <- many1 (noneOf ")")
     spaces
-    char ')'
+    _ <- char ')'
     return op

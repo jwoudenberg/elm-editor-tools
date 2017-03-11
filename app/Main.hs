@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wall #-}
+
 module Main where
 
 import qualified Data.Aeson
@@ -15,8 +17,8 @@ main = do
   return ()
 
 parseFile :: String -> IO ()
-parseFile fileName = do
-  result <- elmParser fileName
+parseFile fileName_ = do
+  result <- elmParser fileName_
   case result of
     Left parseError -> do
       _ <- putStrLn ("Parsing failed with: " ++ (show parseError))

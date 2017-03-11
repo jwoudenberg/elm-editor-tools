@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wall #-}
+
 import Lib
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -23,7 +25,7 @@ tests =
     ]
 
 def :: String -> Int -> Int -> Definition
-def name line column = TopFunction name (Location fileName_ line column)
+def name line_ column_ = TopFunction name (Location fileName_ line_ column_)
 
 fileName_ :: String
 fileName_ = "myFile"
