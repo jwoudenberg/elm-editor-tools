@@ -8,7 +8,8 @@ main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "parseTests" [topLevelFunctionTests, sumTypeTests]
+tests =
+  testGroup "parseTests" [topLevelFunctionTests, sumTypeTests, typeAliasTests]
 
 topLevelFunctionTests :: TestTree
 topLevelFunctionTests =
@@ -58,6 +59,12 @@ sumTypeTests =
         [typeConstructor "Bar" 1 12, typeConstructor "Baz" 1 20]
     ]
 
+typeAliasTests :: TestTree
+typeAliasTests =
+  testGroup
+    "type alias"
+    [t "type alias" "type alias Foo = Bar" [typeAlias "Foo" 1 1]]
+
 topFunction :: String -> Int -> Int -> Definition
 topFunction name line_ column_ =
   TopFunction name (Location fileName_ line_ column_)
@@ -65,6 +72,9 @@ topFunction name line_ column_ =
 typeConstructor :: String -> Int -> Int -> Definition
 typeConstructor name line_ column_ =
   TypeConstructor name (Location fileName_ line_ column_)
+
+typeAlias :: String -> Int -> Int -> Definition
+typeAlias name line_ column_ = TypeAlias name (Location fileName_ line_ column_)
 
 fileName_ :: String
 fileName_ = "myFile"

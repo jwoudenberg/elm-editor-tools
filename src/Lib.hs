@@ -24,6 +24,8 @@ data Definition
                   Location
     | TypeConstructor String
                       Location
+    | TypeAlias String
+                Location
     deriving (Show, Eq)
 
 instance ToJSON Definition where
@@ -35,6 +37,13 @@ instance ToJSON Definition where
             , "column" .= column location
             ]
     toJSON (TypeConstructor name location) =
+        object
+            [ "name" .= name
+            , "fileName" .= fileName location
+            , "line" .= line location
+            , "column" .= column location
+            ]
+    toJSON (TypeAlias name location) =
         object
             [ "name" .= name
             , "fileName" .= fileName location
@@ -65,16 +74,22 @@ line_
     -- When a syntax error is encountered, I don't want to abort parsing, but continue on to the next definition.
     -- As far as I know, parsec offers no way to recover from parsers that failed after consuming input.
  = do
-    choice [try sumType, pure <$> try topFunction, restOfLine >> return []]
+    choice
+        [ pure <$> try typeAlias
+        , try sumType
+        , pure <$> try topFunction
+        , restOfLine >> return []
+        ]
 
 restOfLine :: DefParser String
 restOfLine = manyTill anyChar endOfFileOrLine
 
+-- TODO: match on the function definition, not it's type declaration.
 topFunction :: DefParser Definition
 topFunction = do
     location <- getLocation
     name <- operator <|> lowerCasedWord
-    whitespace
+    _ <- whitespace
     _ <- char ':'
     _ <- restOfLine
     return (TopFunction name location)
@@ -82,15 +97,26 @@ topFunction = do
 sumType :: DefParser [Definition]
 sumType = do
     _ <- string "type"
-    whitespace1 >> notTopLevel
+    _ <- whitespace1 >> notTopLevel
     _ <- typeDefinition
-    whitespace
+    _ <- whitespace
     _ <- char '='
-    whitespace
+    _ <- whitespace
     typeConstructors <-
         sepBy typeConstructor (try $ whitespace >> char '|' >> whitespace)
     _ <- restOfLine
     return typeConstructors
+
+typeAlias :: DefParser Definition
+typeAlias = do
+    location <- getLocation
+    _ <- string "type"
+    _ <- whitespace1
+    _ <- string "alias"
+    _ <- whitespace1
+    name <- capitalizedWord
+    _ <- restOfLine
+    return (TypeAlias name location)
 
 typeDefinition :: DefParser String
 typeDefinition = do
@@ -133,9 +159,9 @@ capitalizedWord = do
 operator :: DefParser String
 operator = do
     _ <- char '('
-    whitespace
+    _ <- whitespace
     op <- many1 (noneOf ")")
-    whitespace
+    _ <- whitespace
     _ <- char ')'
     return op
 
