@@ -89,6 +89,9 @@ topFunction = do
     location <- getLocation
     name <- operator <|> lowerCasedWord
     _ <- whitespace
+    _ <-
+        many $
+        (try whitespace1 >> pure 'x') <|> alphaNum <|> char '(' <|> char ')'
     _ <- char '='
     _ <- restOfLine
     return (TopFunction name location)

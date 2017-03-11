@@ -18,6 +18,7 @@ topLevelFunctionTests =
   testGroup
     "top level functions"
     [ t "top level function" "foo = 42" [topFunction "foo" 1 1]
+    , t "with arguments" "foo (One thing) int = 42" [topFunction "foo" 1 1]
     , t "no whitespace" "foo=42" [topFunction "foo" 1 1]
     , t "much whitespace" "foo   =\t42" [topFunction "foo" 1 1]
     , t "broken across lines" "foo =\n 42" [topFunction "foo" 1 1]
