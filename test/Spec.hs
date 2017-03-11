@@ -23,7 +23,7 @@ tests =
     ]
 
 def :: String -> Int -> Int -> Definition
-def name line column = Definition name (Location fileName_ line column)
+def name line column = TopFunction name (Location fileName_ line column)
 
 fileName_ :: String
 fileName_ = "myFile"

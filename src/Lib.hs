@@ -22,12 +22,12 @@ data Location = Location
     } deriving (Show, Eq)
 
 data Definition =
-    Definition String
-               Location
+    TopFunction String
+                Location
     deriving (Show, Eq)
 
 instance ToJSON Definition where
-    toJSON (Definition name location) =
+    toJSON (TopFunction name location) =
         object
             [ "name" .= name
             , "fileName" .= fileName location
@@ -49,19 +49,19 @@ definitions = do
 line_ :: GenParser Char st (Maybe Definition)
 line_ = do
     spaces
-    choice [Just <$> try definition, anyLine >> return Nothing]
+    choice [Just <$> try topFunction, anyLine >> return Nothing]
 
 anyLine :: GenParser Char st String
 anyLine = do
     manyTill anyChar (newline <|> (eof >> return 'x'))
 
-definition :: GenParser Char st Definition
-definition = do
+topFunction :: GenParser Char st Definition
+topFunction = do
     location <- toLocation <$> getPosition
     name <- operator <|> lowerCasedWord
     spaces
     char ':'
-    return (Definition name location)
+    return (TopFunction name location)
 
 toLocation :: SourcePos -> Location
 toLocation sourcePos =
