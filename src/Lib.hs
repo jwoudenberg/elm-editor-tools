@@ -1,8 +1,9 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Lib
     ( elmParser
     , parseString
+    , Location(..)
     , Definition(..)
     ) where
 
@@ -14,14 +15,25 @@ import GHC.Generics
 import Text.Parsec.String
 import Text.ParserCombinators.Parsec
 
-data Definition = Definition
-    { name :: String
-    , fileName :: String
+data Location = Location
+    { fileName :: String
     , line :: Int
     , column :: Int
-    } deriving (Generic, Show, Eq)
+    } deriving (Show, Eq)
 
-instance ToJSON Definition
+data Definition =
+    Definition String
+               Location
+    deriving (Show, Eq)
+
+instance ToJSON Definition where
+    toJSON (Definition name location) =
+        object
+            [ "name" .= name
+            , "fileName" .= fileName location
+            , "line" .= line location
+            , "column" .= column location
+            ]
 
 elmParser :: String -> IO (Either ParseError [Definition])
 elmParser fileName = parseFromFile definitions fileName
@@ -45,17 +57,19 @@ anyLine = do
 
 definition :: GenParser Char st Definition
 definition = do
-    sourcePos <- getPosition
+    location <- toLocation <$> getPosition
     name <- operator <|> lowerCasedWord
     spaces
     char ':'
-    return
-        (Definition
-         { name = name
-         , fileName = sourceName sourcePos
-         , line = sourceLine sourcePos
-         , column = sourceColumn sourcePos
-         })
+    return (Definition name location)
+
+toLocation :: SourcePos -> Location
+toLocation sourcePos =
+    Location
+    { fileName = sourceName sourcePos
+    , line = sourceLine sourcePos
+    , column = sourceColumn sourcePos
+    }
 
 lowerCasedWord :: GenParser Char st String
 lowerCasedWord = do
