@@ -55,11 +55,16 @@ parseString fileName_ fileContent =
 
 definitions :: DefParser [Definition]
 definitions = do
+    topLevel
     result <- mconcat <$> manyTill line_ eof
     return result
 
 line_ :: DefParser [Definition]
-line_ = do
+line_
+    -- I'd prefer not to have to `try` the entire declaration here, but I don't see I have any choice.
+    -- When a syntax error is encountered, I don't want to abort parsing, but continue on to the next definition.
+    -- As far as I know, parsec offers no way to recover from parsers that failed after consuming input.
+ = do
     choice [try sumType, pure <$> try topFunction, restOfLine >> return []]
 
 restOfLine :: DefParser String
@@ -69,7 +74,7 @@ topFunction :: DefParser Definition
 topFunction = do
     location <- getLocation
     name <- operator <|> lowerCasedWord
-    spaces
+    whitespace
     _ <- char ':'
     _ <- restOfLine
     return (TopFunction name location)
@@ -77,27 +82,30 @@ topFunction = do
 sumType :: DefParser [Definition]
 sumType = do
     _ <- string "type"
-    spaces1
+    whitespace1 >> notTopLevel
     _ <- typeDefinition
-    spaces
+    whitespace
     _ <- char '='
-    spaces
+    whitespace
     typeConstructors <-
-        sepBy typeConstructor (try $ spaces >> char '|' >> spaces)
+        sepBy typeConstructor (try $ whitespace >> char '|' >> whitespace)
     _ <- restOfLine
     return typeConstructors
 
 typeDefinition :: DefParser String
 typeDefinition = do
     baseType <- capitalizedWord
-    typeParams <- optionMaybe $ try $ spaces1 >> sepBy lowerCasedWord spaces1
+    typeParams <-
+        optionMaybe $ try $ whitespace1 >> sepBy lowerCasedWord whitespace1
     return $ concat $ intersperse " " $ baseType : (maybe [] id typeParams)
 
 typeConstructor :: DefParser Definition
 typeConstructor = do
     location <- getLocation
     name <- capitalizedWord
-    optional $ try $ spaces1 >> sepBy lowerCasedWord spaces1
+    _ <-
+        many $
+        (try whitespace1 >> pure 'x') <|> alphaNum <|> char '(' <|> char ')'
     return (TypeConstructor name location)
 
 getLocation :: DefParser Location
@@ -125,14 +133,19 @@ capitalizedWord = do
 operator :: DefParser String
 operator = do
     _ <- char '('
-    spaces
+    whitespace
     op <- many1 (noneOf ")")
-    spaces
+    whitespace
     _ <- char ')'
     return op
 
-spaces1 :: DefParser ()
-spaces1 = space >> spaces >> pure ()
+-- When using whitespace, always ensure it does not end us on the start of the next line.
+-- This would indicate a new definition, which means we need to release control to the top level parser.
+whitespace :: DefParser ()
+whitespace = spaces >> notTopLevel
+
+whitespace1 :: DefParser ()
+whitespace1 = space >> whitespace
 
 endOfFileOrLine :: DefParser ()
 endOfFileOrLine = (endOfLine >> pure ()) <|> eof
