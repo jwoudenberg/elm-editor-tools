@@ -2,19 +2,28 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- Find root elm-package.json and parse it.
+-- Try finding module in one of source directories.
+-- Make a list of all dependencies (includes implicits).
+-- Find directories matching those dependencies.
+-- Parse elm-package.json of dependencies.
+-- Try finding module in one of the dependencies' source directories.
+-- where
+-- The parsing and searching of dependencies elm-package.json is lazy.
+-- Native modules are supported.
 module Imports
   ( modulePath
   ) where
 
-import Control.Applicative
+import Control.Applicative (empty, (<|>))
+import Control.Exception.Base (throwIO)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as ByteString
 import Data.List
-import Data.List.Split
+import Data.List.Split (splitOn)
 import Path
 import Path.IO
 
--- TODO: Use a custom error type.
 data ElmJSON = ElmJSON
   { sourceDirectories :: [FilePath]
   , exposedModules :: [String]
@@ -26,8 +35,8 @@ instance FromJSON ElmJSON where
   parseJSON _ = empty
 
 modulePath :: FilePath -> String -> IO FilePath
-modulePath fromPath moduleName = do
-  elmJSONPath <- getDirPath fromPath >>= getElmJSONPath
+modulePath fromFile moduleName = do
+  elmJSONPath <- getDirPath fromFile >>= getElmJSONPath
   -- TODO: Add some proper error handling here when Json parsing fails.
   Right elmJSON <- eitherDecode <$> ByteString.readFile (toFilePath elmJSONPath)
   sources <- traverse parseRelDir (sourceDirectories elmJSON)
@@ -36,7 +45,7 @@ modulePath fromPath moduleName = do
   finalPath <-
     foldr
       (<|>)
-      (ioError $ userError "File not found")
+      (throwIO $ userError "File not found")
       (map (relOnRoot relModulePath . absSourcePath elmJSONPath) sources)
   return (toFilePath finalPath)
   where
@@ -49,26 +58,15 @@ relOnRoot filePath rootDir = do
   exists <- doesFileExist absFilePath
   if exists
     then return absFilePath
-    else ioError (userError "File not found")
+    else throwIO (userError "File not found")
   where
     absFilePath = rootDir </> filePath
 
--- Find root elm-package.json and parse it.
--- Try finding module in one of source directories.
--- Make a list of all dependencies (includes implicits).
--- Find directories matching those dependencies.
--- Parse elm-package.json of dependencies.
--- Try finding module in one of the dependencies' source directories.
--- where
--- The parsing and searching of dependencies elm-package.json is lazy.
--- Native modules are supported.
 getDirPath :: FilePath -> IO (Path Abs Dir)
-getDirPath path =
-  parseAbsDir path <|> relDir path <|> absDir path <|> relFile path
-  where
-    relDir path_ = parseRelDir path_ >>= makeAbsolute
-    absDir path_ = parent <$> parseAbsFile path_
-    relFile path_ = parent <$> (parseRelFile path_ >>= makeAbsolute)
+getDirPath path = do
+  cwd <- getCurrentDir
+  absPathToFile <- resolveFile cwd path
+  return (parent absPathToFile)
 
 getElmJSONPath :: Path Abs Dir -> IO (Path Abs File)
 getElmJSONPath dir = do
@@ -81,7 +79,7 @@ getElmJSONPath dir = do
     parentDir = parent dir
     lookInParent =
       if dir == parentDir
-        then ioError (userError "No elm-package.json found.")
+        then throwIO (userError "No elm-package.json found.")
         else getElmJSONPath parentDir
 
 moduleAsPath :: String -> Path Rel File
