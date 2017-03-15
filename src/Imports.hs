@@ -13,10 +13,12 @@
 -- Native modules are supported.
 module Imports
   ( modulePath
+  , Error(..)
   ) where
 
 import Control.Applicative (empty, (<|>))
-import Control.Exception.Base (throwIO, try)
+import Control.Exception.Base (throwIO)
+import Control.Monad (join)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as ByteString
 import Data.List
@@ -26,53 +28,54 @@ import Path.IO
 
 data ElmJSON = ElmJSON
   { sourceDirectories :: [FilePath]
-  , exposedModules :: [String]
   } deriving (Show)
 
 instance FromJSON ElmJSON where
-  parseJSON (Object v) =
-    ElmJSON <$> v .: "source-directories" <*> v .: "exposed-modules"
+  parseJSON (Object v) = ElmJSON <$> v .: "source-directories"
   parseJSON _ = empty
 
 data Error
   = CouldNotFindElmJSON
-  | CouldNotParseElmJSON
+  | CouldNotParseElmJSON FilePath
 
-modulePath :: FilePath -> String -> IO FilePath
+modulePath :: FilePath -> String -> IO (Either Error FilePath)
 modulePath fromFile moduleName = do
   elmJSONPath <- getDirPath fromFile >>= getElmJSONPath
-  -- TODO: Add some proper error handling here when Json parsing fails.
-  Right elmJSON <- getElmJSON elmJSONPath
-  sources <- traverse parseRelDir (sourceDirectories elmJSON)
+  elmJSON <- fmap join $ traverse getElmJSON elmJSONPath
+  sources <- sequence $ (pure getSourceDirectories) <*> elmJSONPath <*> elmJSON
+  finalPath <- traverse (findModuleInRoots moduleName) sources
+  return $ fmap toFilePath finalPath
+
+findModuleInRoots :: String -> [Path Abs Dir] -> IO (Path Abs File)
+findModuleInRoots moduleName rootDirs
   -- TODO: Clean up the code below to make it easier to read.
   -- TODO: Search through dependencies too.
-  finalPath <-
-    foldr
-      (<|>)
-      (throwIO $ userError "File not found")
-      (map (relOnRoot relModulePath . absSourcePath elmJSONPath) sources)
-  return (toFilePath finalPath)
+ =
+  foldr
+    (<|>)
+    (throwIO $ userError "File not found")
+    (map (relOnRoot relModulePath) rootDirs)
   where
     relModulePath = moduleAsPath moduleName
-    absSourcePath elmJSONPath relSourcePath =
-      parent elmJSONPath </> relSourcePath
+
+getSourceDirectories :: Path Abs File -> ElmJSON -> IO [Path Abs Dir]
+getSourceDirectories elmJSONPath = traverse parseToRoot . sourceDirectories
+  where
+    parseToRoot :: FilePath -> IO (Path Abs Dir)
+    parseToRoot path = do
+      relDir <- parseRelDir path
+      return $ (parent elmJSONPath) </> relDir
 
 getElmJSON :: Path Abs File -> IO (Either Error ElmJSON)
 getElmJSON elmJSONPath = do
-  jsonString <-
-    tryOrError CouldNotFindElmJSON $
-    ByteString.readFile (toFilePath elmJSONPath)
-  return $ jsonString >>= decodeElmJSON
+  jsonString <- ByteString.readFile (toFilePath elmJSONPath)
+  return $ decodeElmJSON elmJSONPath jsonString
 
-decodeElmJSON :: ByteString.ByteString -> Either Error ElmJSON
-decodeElmJSON jsonString =
-  mapLeft (const CouldNotParseElmJSON) (eitherDecode jsonString)
-
-tryOrError :: e -> IO a -> IO (Either e a)
-tryOrError err io = mapLeft (const err) <$> tryIO io
-
-tryIO :: IO a -> IO (Either IOError a)
-tryIO = try
+decodeElmJSON :: Path Abs File -> ByteString.ByteString -> Either Error ElmJSON
+decodeElmJSON elmJSONPath jsonString =
+  mapLeft
+    (const $ CouldNotParseElmJSON (toFilePath elmJSONPath))
+    (eitherDecode jsonString)
 
 mapLeft :: (a -> b) -> Either a x -> Either b x
 mapLeft fn either' =
@@ -95,18 +98,18 @@ getDirPath path = do
   absPathToFile <- resolveFile cwd path
   return (parent absPathToFile)
 
-getElmJSONPath :: Path Abs Dir -> IO (Path Abs File)
+getElmJSONPath :: Path Abs Dir -> IO (Either Error (Path Abs File))
 getElmJSONPath dir = do
   exists <- doesFileExist elmJSONPath
   if exists
-    then return elmJSONPath
+    then return $ Right elmJSONPath
     else lookInParent
   where
     elmJSONPath = dir </> $(mkRelFile "elm-package.json")
     parentDir = parent dir
     lookInParent =
       if dir == parentDir
-        then throwIO (userError "No elm-package.json found.")
+        then return $ Left CouldNotFindElmJSON
         else getElmJSONPath parentDir
 
 moduleAsPath :: String -> Path Rel File
