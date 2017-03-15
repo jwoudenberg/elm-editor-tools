@@ -16,7 +16,7 @@ module Imports
   ) where
 
 import Control.Applicative (empty, (<|>))
-import Control.Exception.Base (throwIO)
+import Control.Exception.Base (throwIO, try)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as ByteString
 import Data.List
@@ -34,11 +34,15 @@ instance FromJSON ElmJSON where
     ElmJSON <$> v .: "source-directories" <*> v .: "exposed-modules"
   parseJSON _ = empty
 
+data Error
+  = CouldNotFindElmJSON
+  | CouldNotParseElmJSON
+
 modulePath :: FilePath -> String -> IO FilePath
 modulePath fromFile moduleName = do
   elmJSONPath <- getDirPath fromFile >>= getElmJSONPath
   -- TODO: Add some proper error handling here when Json parsing fails.
-  Right elmJSON <- eitherDecode <$> ByteString.readFile (toFilePath elmJSONPath)
+  Right elmJSON <- getElmJSON elmJSONPath
   sources <- traverse parseRelDir (sourceDirectories elmJSON)
   -- TODO: Clean up the code below to make it easier to read.
   -- TODO: Search through dependencies too.
@@ -52,6 +56,29 @@ modulePath fromFile moduleName = do
     relModulePath = moduleAsPath moduleName
     absSourcePath elmJSONPath relSourcePath =
       parent elmJSONPath </> relSourcePath
+
+getElmJSON :: Path Abs File -> IO (Either Error ElmJSON)
+getElmJSON elmJSONPath = do
+  jsonString <-
+    tryOrError CouldNotFindElmJSON $
+    ByteString.readFile (toFilePath elmJSONPath)
+  return $ jsonString >>= decodeElmJSON
+
+decodeElmJSON :: ByteString.ByteString -> Either Error ElmJSON
+decodeElmJSON jsonString =
+  mapLeft (const CouldNotParseElmJSON) (eitherDecode jsonString)
+
+tryOrError :: e -> IO a -> IO (Either e a)
+tryOrError err io = mapLeft (const err) <$> tryIO io
+
+tryIO :: IO a -> IO (Either IOError a)
+tryIO = try
+
+mapLeft :: (a -> b) -> Either a x -> Either b x
+mapLeft fn either' =
+  case either' of
+    Left x -> Left (fn x)
+    Right x -> Right x
 
 relOnRoot :: Path Rel File -> Path Abs Dir -> IO (Path Abs File)
 relOnRoot filePath rootDir = do
