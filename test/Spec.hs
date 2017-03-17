@@ -34,6 +34,10 @@ topLevelFunctionTests =
         "destructured record"
         "{ foo, bar } = something"
         [topFunction "foo" 1 3, topFunction "bar" 1 8]
+    , t
+        "destructured tuple"
+        "( foo, bar ) = something"
+        [topFunction "foo" 1 3, topFunction "bar" 1 8]
     ]
 
 sumTypeTests :: TestTree

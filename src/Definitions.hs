@@ -78,6 +78,7 @@ line_
         [ pure <$> try typeAlias
         , try sumType
         , try destructuredRecord
+        , try destructuredTuple
         , pure <$> try topFunction
         , restOfLine >> return []
         ]
@@ -92,6 +93,17 @@ destructuredRecord = do
     recordDefinitions <- sepBy var (try $ whitespace >> char ',' >> whitespace)
     _ <- whitespace
     _ <- char '}'
+    _ <- whitespace
+    _ <- char '='
+    return recordDefinitions
+
+destructuredTuple :: DefParser [Definition]
+destructuredTuple = do
+    _ <- char '('
+    _ <- whitespace
+    recordDefinitions <- sepBy var (try $ whitespace >> char ',' >> whitespace)
+    _ <- whitespace
+    _ <- char ')'
     _ <- whitespace
     _ <- char '='
     return recordDefinitions
