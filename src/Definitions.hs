@@ -77,6 +77,7 @@ line_
     choice
         [ pure <$> try typeAlias
         , try sumType
+        , try destructuredRecord
         , pure <$> try topFunction
         , restOfLine >> return []
         ]
@@ -84,16 +85,32 @@ line_
 restOfLine :: DefParser String
 restOfLine = manyTill anyChar endOfFileOrLine
 
+destructuredRecord :: DefParser [Definition]
+destructuredRecord = do
+    _ <- char '{'
+    _ <- whitespace
+    recordDefinitions <- sepBy var (try $ whitespace >> char ',' >> whitespace)
+    _ <- whitespace
+    _ <- char '}'
+    _ <- whitespace
+    _ <- char '='
+    return recordDefinitions
+
 topFunction :: DefParser Definition
 topFunction = do
-    location <- getLocation
-    name <- operator <|> lowerCasedWord
+    definition <- var
     _ <- whitespace
     _ <-
         many $
         (try whitespace1 >> pure 'x') <|> alphaNum <|> char '(' <|> char ')'
     _ <- char '='
     _ <- restOfLine
+    return definition
+
+var :: DefParser Definition
+var = do
+    location <- getLocation
+    name <- operator <|> lowerCasedWord
     return (TopFunction name location)
 
 sumType :: DefParser [Definition]

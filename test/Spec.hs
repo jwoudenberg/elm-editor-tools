@@ -30,6 +30,10 @@ topLevelFunctionTests =
         "tailing content"
         "foo = 42 and some more stuff\nanother line"
         [topFunction "foo" 1 1]
+    , t
+        "destructured record"
+        "{ foo, bar } = something"
+        [topFunction "foo" 1 3, topFunction "bar" 1 8]
     ]
 
 sumTypeTests :: TestTree
