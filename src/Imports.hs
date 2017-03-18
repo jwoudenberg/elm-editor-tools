@@ -16,11 +16,12 @@ module Imports
   ) where
 
 import Control.Applicative ((<|>), liftA2)
-import Control.Monad (join)
 import Control.Monad.Except
 import Data.List
 import Data.List.Split (splitOn)
-import ElmConfig (ElmJSON(sourceDirectories), readElmJSON)
+import Data.Map.Strict as Map
+import ElmConfig
+       (ElmJSON(sourceDirectories), DepsJSON, readElmJSON, readDepsJSON)
 import Error
 import Path
 import Path.IO
@@ -39,7 +40,9 @@ modulePath fromFile moduleName =
   runExceptT $ do
     let relModulePath = moduleAsPath moduleName
     projectRoot <- getDirPath fromFile >>= findProjectRoot
-    candidatePath <- candidateInRoot relModulePath projectRoot
+    let projectCandidate = candidateInRoot relModulePath projectRoot
+    let allDepsCandidate = depsCandidate relModulePath projectRoot
+    candidatePath <- (liftA2 mappend) projectCandidate allDepsCandidate
     finalPath <- ensureCandidate candidatePath
     return (toFilePath finalPath)
 
@@ -96,8 +99,35 @@ findProjectRoot dir = do
         then throwError CouldNotFindElmJSON
         else findProjectRoot parentDir
 
+depsCandidate :: Path Rel File -> Path Abs Dir -> App Candidate
+depsCandidate relModulePath rootDir = do
+  deps <- depPaths rootDir
+  candidates <- traverse (candidateInRoot relModulePath) deps
+  return (mconcat candidates)
+
+depPaths :: Path Abs Dir -> App [Path Abs Dir]
+depPaths rootDir = do
+  deps <- ExceptT $ readDepsJSON (rootDir </> depsJSONPath)
+  return $ asPaths rootDir deps
+
+asPaths :: Path Abs Dir -> DepsJSON -> [Path Abs Dir]
+asPaths rootDir depsJSON = fmap (uncurry $ asPath rootDir) (Map.assocs depsJSON)
+
+asPath :: Path Abs Dir -> String -> String -> Path Abs Dir
+asPath rootDir packageName version =
+  rootDir </> packagesPath </> pathForPackage </> pathForVersion
+  where
+    Right pathForPackage = parseRelDir packageName
+    Right pathForVersion = parseRelDir version
+
 elmJSONPath :: Path Rel File
 elmJSONPath = $(mkRelFile "elm-package.json")
+
+depsJSONPath :: Path Rel File
+depsJSONPath = $(mkRelFile "elm-stuff/exact-dependencies.json")
+
+packagesPath :: Path Rel Dir
+packagesPath = $(mkRelDir "elm-stuff/packages")
 
 moduleAsPath :: String -> Path Rel File
 moduleAsPath moduleName = pathToModule

@@ -12,7 +12,7 @@ module ElmConfig
 import Control.Applicative (empty)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as ByteString
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Error
 import Path
 
