@@ -24,6 +24,8 @@ import Error
 import Path
 import Path.IO
 
+type App a = IO (Either Error a)
+
 newtype Candidate =
   Candidate (IO (Maybe (Path Abs File)))
 
@@ -31,7 +33,7 @@ instance Monoid Candidate where
   mempty = Candidate $ pure Nothing
   mappend (Candidate x) (Candidate y) = Candidate (liftA2 (<|>) x y)
 
-modulePath :: FilePath -> String -> IO (Either Error FilePath)
+modulePath :: FilePath -> String -> App FilePath
 modulePath fromFile moduleName = do
   let relModulePath = moduleAsPath moduleName
   projectRoot <- getDirPath fromFile >>= findProjectRoot
@@ -40,7 +42,7 @@ modulePath fromFile moduleName = do
   finalPath <- join <$> traverse (ensureCandidate) candidatePath
   return $ fmap toFilePath finalPath
 
-candidateInRoot :: Path Abs Dir -> Path Rel File -> IO (Either Error Candidate)
+candidateInRoot :: Path Abs Dir -> Path Rel File -> App Candidate
 candidateInRoot rootDir relModulePath = do
   let absElmJSONPath = rootDir </> elmJSONPath
   elmJSON <- readElmJSON absElmJSONPath
@@ -52,7 +54,7 @@ candidateInSources relModulePath sourceDirs = foldMap candidate moduleDirs
   where
     moduleDirs = fmap (\source -> source </> relModulePath) sourceDirs
 
-ensureCandidate :: Candidate -> IO (Either Error (Path Abs File))
+ensureCandidate :: Candidate -> App (Path Abs File)
 ensureCandidate (Candidate candidatePath) = do
   maybePath <- candidatePath
   return $ maybe (Left CouldNotFindModule) pure maybePath
@@ -79,7 +81,7 @@ getDirPath path = do
   absPathToFile <- resolveFile cwd path
   return (parent absPathToFile)
 
-findProjectRoot :: Path Abs Dir -> IO (Either Error (Path Abs Dir))
+findProjectRoot :: Path Abs Dir -> App (Path Abs Dir)
 findProjectRoot dir = do
   exists <- doesFileExist (dir </> elmJSONPath)
   if exists
