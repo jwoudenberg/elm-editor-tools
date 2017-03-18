@@ -33,24 +33,29 @@ instance Monoid Candidate where
 
 modulePath :: FilePath -> String -> IO (Either Error FilePath)
 modulePath fromFile moduleName = do
+  let relModulePath = moduleAsPath moduleName
   projectRoot <- getDirPath fromFile >>= findProjectRoot
-  let elmJSONPath' = fmap elmJSONPathInDir projectRoot
-  elmJSON <- fmap join $ traverse readElmJSON elmJSONPath'
-  sources <- sequence $ (liftA2 getSourceDirectories) projectRoot elmJSON
-  finalPath <- fmap join $ traverse (findModuleInRoots moduleName) sources
+  candidatePath <-
+    join <$> traverse (flip candidateInRoot relModulePath) projectRoot
+  finalPath <- join <$> traverse (ensureCandidate) candidatePath
   return $ fmap toFilePath finalPath
 
-findModuleInRoots :: String
-                  -> [Path Abs Dir]
-                  -> IO (Either Error (Path Abs File))
-findModuleInRoots moduleName rootDirs = do
-  let relModulePath = moduleAsPath moduleName
-  let moduleDirs = fmap (\root -> root </> relModulePath) rootDirs
-  maybePath <- unwrap $ foldMap candidate moduleDirs
-  return $ maybe (Left CouldNotFindModule) pure maybePath
+candidateInRoot :: Path Abs Dir -> Path Rel File -> IO (Either Error Candidate)
+candidateInRoot rootDir relModulePath = do
+  let absElmJSONPath = rootDir </> elmJSONPath
+  elmJSON <- readElmJSON absElmJSONPath
+  sourceDirs <- traverse (getSourceDirs rootDir) elmJSON
+  pure $ fmap (candidateInSources relModulePath) sourceDirs
 
-unwrap :: Candidate -> IO (Maybe (Path Abs File))
-unwrap (Candidate innerIO) = innerIO
+candidateInSources :: Path Rel File -> [Path Abs Dir] -> Candidate
+candidateInSources relModulePath sourceDirs = foldMap candidate moduleDirs
+  where
+    moduleDirs = fmap (\source -> source </> relModulePath) sourceDirs
+
+ensureCandidate :: Candidate -> IO (Either Error (Path Abs File))
+ensureCandidate (Candidate candidatePath) = do
+  maybePath <- candidatePath
+  return $ maybe (Left CouldNotFindModule) pure maybePath
 
 candidate :: Path Abs File -> Candidate
 candidate filePath =
@@ -60,8 +65,8 @@ candidate filePath =
       then return (Just filePath)
       else return Nothing
 
-getSourceDirectories :: Path Abs Dir -> ElmJSON -> IO [Path Abs Dir]
-getSourceDirectories projectRoot = traverse parseToRoot . sourceDirectories
+getSourceDirs :: Path Abs Dir -> ElmJSON -> IO [Path Abs Dir]
+getSourceDirs projectRoot = traverse parseToRoot . sourceDirectories
   where
     parseToRoot :: FilePath -> IO (Path Abs Dir)
     parseToRoot path = do
@@ -90,11 +95,9 @@ findProjectRoot dir = do
 elmJSONPath :: Path Rel File
 elmJSONPath = $(mkRelFile "elm-package.json")
 
-elmJSONPathInDir :: Path Abs Dir -> Path Abs File
-elmJSONPathInDir dir = dir </> elmJSONPath
-
 moduleAsPath :: String -> Path Rel File
 moduleAsPath moduleName = pathToModule
+    -- TODO: Handle this error more nicely.
   where
     Right pathToModule = parseRelFile $ baseName ++ extension
     segments = splitOn "." moduleName
