@@ -36,7 +36,7 @@ instance Monoid Candidate where
   mappend (Candidate current) (Candidate next) =
     Candidate $ do
       maybePath <- current
-      -- Stop working the moment you find the first good candidate.
+      -- Stop working the moment you find a working candidate.
       case maybePath of
         Just path -> pure (Just path)
         Nothing -> next
@@ -45,8 +45,9 @@ modulePath :: FilePath -> String -> IO (Either Error FilePath)
 modulePath fromFile moduleName =
   runExceptT $ do
     let relModulePath = moduleAsPath moduleName
-    projectRoot <- getDirPath fromFile >>= findProjectRoot
-    let projectCandidate = candidateInRoot relModulePath projectRoot
+    localRoot <- getDirPath fromFile >>= findLocalRoot
+    let projectRoot = findProjectRoot localRoot
+    let projectCandidate = candidateInRoot relModulePath localRoot
     let allDepsCandidate = depsCandidate relModulePath projectRoot
     candidatePath <- (liftA2 mappend) projectCandidate allDepsCandidate
     finalPath <- ensureCandidate candidatePath
@@ -91,8 +92,8 @@ getDirPath path = do
   absPathToFile <- resolveFile cwd path
   return (parent absPathToFile)
 
-findProjectRoot :: Path Abs Dir -> App (Path Abs Dir)
-findProjectRoot dir = do
+findLocalRoot :: Path Abs Dir -> App (Path Abs Dir)
+findLocalRoot dir = do
   exists <- doesFileExist (dir </> elmJSONPath)
   if exists
     then return dir
@@ -102,7 +103,17 @@ findProjectRoot dir = do
     tryParent =
       if dir == parentDir
         then throwError CouldNotFindElmJSON
-        else findProjectRoot parentDir
+        else findLocalRoot parentDir
+
+findProjectRoot :: Path Abs Dir -> Path Abs Dir
+findProjectRoot localRoot
+  -- Check whether the localRoot is a dependency, meaning it has this form:
+  -- <projectRoot>/elm-stuff/packages/<user>/<package-name>/<version>
+ = do
+  let maybeElmStuffPath = parent $ parent $ parent $ parent $ localRoot
+  if dirname maybeElmStuffPath == $(mkRelDir "elm-stuff")
+    then parent maybeElmStuffPath
+    else localRoot
 
 depsCandidate :: Path Rel File -> Path Abs Dir -> App Candidate
 depsCandidate relModulePath rootDir = do
