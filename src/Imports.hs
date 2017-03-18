@@ -24,6 +24,13 @@ import Error
 import Path
 import Path.IO
 
+newtype Candidate =
+  Candidate (IO (Maybe (Path Abs File)))
+
+instance Monoid Candidate where
+  mempty = Candidate $ pure Nothing
+  mappend (Candidate x) (Candidate y) = Candidate (liftA2 (<|>) x y)
+
 modulePath :: FilePath -> String -> IO (Either Error FilePath)
 modulePath fromFile moduleName = do
   elmJSONPath <- getDirPath fromFile >>= getElmJSONPath
@@ -37,9 +44,18 @@ findModuleInRoots :: String
                   -> IO (Either Error (Path Abs File))
 findModuleInRoots moduleName rootDirs = do
   let relModulePath = moduleAsPath moduleName
-  let candidatePaths = map (relOnRoot relModulePath) rootDirs
-  maybePath <- foldr (liftA2 (<|>)) (pure Nothing) candidatePaths
+  let moduleDirs = fmap (\root -> root </> relModulePath) rootDirs
+  let Candidate candidatePath = foldMap candidate moduleDirs
+  maybePath <- candidatePath
   return $ maybe (Left CouldNotFindModule) pure maybePath
+
+candidate :: Path Abs File -> Candidate
+candidate filePath =
+  Candidate $ do
+    exists <- doesFileExist filePath
+    if exists
+      then return (Just filePath)
+      else return Nothing
 
 getSourceDirectories :: Path Abs File -> ElmJSON -> IO [Path Abs Dir]
 getSourceDirectories elmJSONPath = traverse parseToRoot . sourceDirectories
@@ -48,14 +64,6 @@ getSourceDirectories elmJSONPath = traverse parseToRoot . sourceDirectories
     parseToRoot path = do
       relDir <- parseRelDir path
       return $ (parent elmJSONPath) </> relDir
-
-relOnRoot :: Path Rel File -> Path Abs Dir -> IO (Maybe (Path Abs File))
-relOnRoot filePath rootDir = do
-  let absFilePath = rootDir </> filePath
-  exists <- doesFileExist absFilePath
-  if exists
-    then return (Just absFilePath)
-    else return Nothing
 
 getDirPath :: FilePath -> IO (Path Abs Dir)
 getDirPath path = do
