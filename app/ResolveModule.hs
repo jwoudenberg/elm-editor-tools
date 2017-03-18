@@ -4,7 +4,7 @@ module Main where
 
 import Lib (modulePath, Error(..))
 import qualified System.Environment
-import qualified System.Exit
+import System.Exit (die)
 
 main :: IO ()
 main = do
@@ -17,30 +17,22 @@ getArgs = do
   case args of
     [fromFile, moduleName] -> pure (fromFile, moduleName)
     _ -> do
-      exitWithError usage
+      die usage
 
 resolveModule :: FilePath -> String -> IO ()
 resolveModule fromFile moduleName = do
   resolvedPath' <- modulePath fromFile moduleName
   case resolvedPath' of
     Left Lib.CouldNotFindElmJSON ->
-      exitWithError $
+      die $
       "No elm-package.Rson file found. Is \"" ++
       fromFile ++ "\" in an instantiated elm project?"
     Left (Lib.CouldNotParseElmJSON elmJSONPath) ->
-      exitWithError $
-      "Could not parse elm-package.json found at: " ++ elmJSONPath
+      die $ "Could not parse elm-package.json found at: " ++ elmJSONPath
     Left (Lib.CouldNotParseDepsJSON depsJSONPath) ->
-      exitWithError $
-      "Could not parse exact-dependencies.json found at: " ++ depsJSONPath
-    Left Lib.CouldNotFindModule ->
-      exitWithError $ "Could not find module: " ++ moduleName
+      die $ "Could not parse exact-dependencies.json found at: " ++ depsJSONPath
+    Left Lib.CouldNotFindModule -> die $ "Could not find module: " ++ moduleName
     Right resolvedPath -> putStrLn resolvedPath
 
 usage :: String
 usage = "Usage:\n  elm-resolve-module <from-path> <module-name>"
-
-exitWithError :: String -> IO a
-exitWithError msg = do
-  _ <- putStrLn msg
-  System.Exit.exitFailure
