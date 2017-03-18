@@ -69,26 +69,23 @@ definitions = do
   return result
 
 line_ :: DefParser [Definition]
-line_
+line_ = do
+  (option [] declaration) <* restOfLine
     -- I'd prefer not to have to `try` each definition parser here, but I don't see I have any choice.
     -- When a syntax error is encountered, I don't want to abort parsing, but continue on to the next definition.
     -- As far as I know, parsec offers no way to recover from parsers that failed after consuming input.
- = do
-  (option [] declaration) <* restOfLine
   where
     declaration = choice (fmap try declarationParsers)
 
 declarationParsers :: [DefParser [Definition]]
 declarationParsers =
-  [ pure <$> typeAlias
-  , sumType
-  , destructuredRecord
-  , destructuredTuple
-  , pure <$> topFunction
-  ]
+  [pure <$> typeAlias, sumType, constants, pure <$> topFunction]
 
 restOfLine :: DefParser String
 restOfLine = manyTill anyChar endOfFileOrLine
+
+constants :: DefParser [Definition]
+constants = destructuredRecord <|> destructuredTuple
 
 destructuredRecord :: DefParser [Definition]
 destructuredRecord = do
