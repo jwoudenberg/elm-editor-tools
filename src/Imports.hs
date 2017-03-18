@@ -82,12 +82,11 @@ mapLeft fn either' =
 
 relOnRoot :: Path Rel File -> Path Abs Dir -> IO (Maybe (Path Abs File))
 relOnRoot filePath rootDir = do
+  let absFilePath = rootDir </> filePath
   exists <- doesFileExist absFilePath
   if exists
     then return (Just absFilePath)
     else return Nothing
-  where
-    absFilePath = rootDir </> filePath
 
 getDirPath :: FilePath -> IO (Path Abs Dir)
 getDirPath path = do
@@ -97,12 +96,12 @@ getDirPath path = do
 
 getElmJSONPath :: Path Abs Dir -> IO (Either Error (Path Abs File))
 getElmJSONPath dir = do
+  let elmJSONPath = dir </> $(mkRelFile "elm-package.json")
   exists <- doesFileExist elmJSONPath
   if exists
     then return $ Right elmJSONPath
     else lookInParent
   where
-    elmJSONPath = dir </> $(mkRelFile "elm-package.json")
     parentDir = parent dir
     lookInParent =
       if dir == parentDir
