@@ -42,31 +42,29 @@ instance Monoid Candidate where
         Nothing -> next
 
 modulePath :: FilePath -> String -> IO (Either Error FilePath)
-modulePath fromFile moduleName =
+modulePath importedFromFile moduleName =
   runExceptT $ do
     let relModulePath = moduleAsPath moduleName
-    localRoot <- getDirPath fromFile >>= findLocalRoot
+    localRoot <- getDirPath importedFromFile >>= findLocalRoot
     let projectRoot = findProjectRoot localRoot
     let projectCandidate = candidateInRoot relModulePath localRoot
     let allDepsCandidate = depsCandidate relModulePath projectRoot
     candidatePath <- (liftA2 mappend) projectCandidate allDepsCandidate
-    finalPath <- ensureCandidate candidatePath
+    finalPath <- runCandidate candidatePath
     return (toFilePath finalPath)
 
 candidateInRoot :: Path Rel File -> Path Abs Dir -> App Candidate
 candidateInRoot relModulePath rootDir = do
-  let absElmJSONPath = rootDir </> elmJSONPath
-  elmJSON <- ExceptT $ readElmJSON absElmJSONPath
-  sourceDirs <- getSourceDirs rootDir elmJSON
-  pure (candidateInSources relModulePath sourceDirs)
+  sourceDirs <- getSourceDirs rootDir
+  pure (candidateInSourceDirs relModulePath sourceDirs)
 
-candidateInSources :: Path Rel File -> [Path Abs Dir] -> Candidate
-candidateInSources relModulePath sourceDirs = foldMap candidate moduleDirs
+candidateInSourceDirs :: Path Rel File -> [Path Abs Dir] -> Candidate
+candidateInSourceDirs relModulePath sourceDirs = foldMap candidate moduleDirs
   where
     moduleDirs = fmap (\source -> source </> relModulePath) sourceDirs
 
-ensureCandidate :: Candidate -> App (Path Abs File)
-ensureCandidate (Candidate candidatePath) =
+runCandidate :: Candidate -> App (Path Abs File)
+runCandidate (Candidate candidatePath) =
   ExceptT $ do
     maybePath <- candidatePath
     return $ maybe (Left CouldNotFindModule) pure maybePath
@@ -79,12 +77,14 @@ candidate filePath =
       then return (Just filePath)
       else return Nothing
 
-getSourceDirs :: Path Abs Dir -> ElmJSON -> App [Path Abs Dir]
-getSourceDirs projectRoot elmJSON =
-  traverse parseToRoot $ sourceDirectories elmJSON
+getSourceDirs :: Path Abs Dir -> App [Path Abs Dir]
+getSourceDirs localRoot = do
+  let absElmJSONPath = localRoot </> elmJSONPath
+  elmJSON <- ExceptT $ readElmJSON absElmJSONPath
+  traverse withRoot $ sourceDirectories elmJSON
   where
-    parseToRoot :: FilePath -> App (Path Abs Dir)
-    parseToRoot path = resolveDir projectRoot path
+    withRoot :: FilePath -> App (Path Abs Dir)
+    withRoot path = resolveDir localRoot path
 
 getDirPath :: FilePath -> App (Path Abs Dir)
 getDirPath path = do
@@ -116,22 +116,23 @@ findProjectRoot localRoot
     else localRoot
 
 depsCandidate :: Path Rel File -> Path Abs Dir -> App Candidate
-depsCandidate relModulePath rootDir = do
-  deps <- depPaths rootDir
+depsCandidate relModulePath projectRoot = do
+  deps <- depPaths projectRoot
   candidates <- traverse (candidateInRoot relModulePath) deps
   return (mconcat candidates)
 
 depPaths :: Path Abs Dir -> App [Path Abs Dir]
-depPaths rootDir = do
-  deps <- ExceptT $ readDepsJSON (rootDir </> depsJSONPath)
-  return $ asPaths rootDir deps
+depPaths projectRoot = do
+  deps <- ExceptT $ readDepsJSON (projectRoot </> depsJSONPath)
+  return $ asPaths projectRoot deps
 
 asPaths :: Path Abs Dir -> DepsJSON -> [Path Abs Dir]
-asPaths rootDir depsJSON = fmap (uncurry $ asPath rootDir) (Map.assocs depsJSON)
+asPaths projectRoot depsJSON =
+  fmap (uncurry $ asPath projectRoot) (Map.assocs depsJSON)
 
 asPath :: Path Abs Dir -> String -> String -> Path Abs Dir
-asPath rootDir packageName version =
-  rootDir </> packagesPath </> pathForPackage </> pathForVersion
+asPath projectRoot packageName version =
+  projectRoot </> packagesPath </> pathForPackage </> pathForVersion
   where
     Right pathForPackage = parseRelDir packageName
     Right pathForVersion = parseRelDir version
