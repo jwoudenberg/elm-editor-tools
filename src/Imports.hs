@@ -15,7 +15,7 @@ module Imports
   ( modulePath
   ) where
 
-import Control.Applicative ((<|>), liftA2)
+import Control.Applicative (liftA2)
 import Control.Monad.Except
 import Data.List
 import Data.List.Split (splitOn)
@@ -33,7 +33,13 @@ newtype Candidate =
 
 instance Monoid Candidate where
   mempty = Candidate $ pure Nothing
-  mappend (Candidate x) (Candidate y) = Candidate (liftA2 (<|>) x y)
+  mappend (Candidate current) (Candidate next) =
+    Candidate $ do
+      maybePath <- current
+      -- Stop working the moment you find the first good candidate.
+      case maybePath of
+        Just path -> pure (Just path)
+        Nothing -> next
 
 modulePath :: FilePath -> String -> IO (Either Error FilePath)
 modulePath fromFile moduleName =
