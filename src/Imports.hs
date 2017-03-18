@@ -99,7 +99,7 @@ elmJSONPath = $(mkRelFile "elm-package.json")
 
 moduleAsPath :: String -> Path Rel File
 moduleAsPath moduleName = pathToModule
-    -- TODO: Handle this error more nicely.
+    -- We assume a module name will always result in a valid file path.
   where
     Right pathToModule = parseRelFile $ baseName ++ extension
     segments = splitOn "." moduleName
