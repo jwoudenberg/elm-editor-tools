@@ -42,7 +42,7 @@ modulePath :: FilePath -> String -> IO (Either Error FilePath)
 modulePath fromFile moduleName = do
   elmJSONPath <- getDirPath fromFile >>= getElmJSONPath
   elmJSON <- fmap join $ traverse getElmJSON elmJSONPath
-  sources <- sequence $ (pure getSourceDirectories) <*> elmJSONPath <*> elmJSON
+  sources <- sequence $ (liftA2 getSourceDirectories) elmJSONPath elmJSON
   finalPath <- fmap join $ traverse (findModuleInRoots moduleName) sources
   return $ fmap toFilePath finalPath
 
