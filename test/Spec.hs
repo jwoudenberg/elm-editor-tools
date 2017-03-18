@@ -38,6 +38,10 @@ topLevelFunctionTests =
         "destructured tuple"
         "( foo, bar ) = something"
         [topFunction "foo" 1 3, topFunction "bar" 1 8]
+    , t
+        "nested destructured tuple"
+        "( ( foo, bar ), { baz }) = something"
+        [topFunction "foo" 1 5, topFunction "bar" 1 10, topFunction "baz" 1 19]
     ]
 
 sumTypeTests :: TestTree

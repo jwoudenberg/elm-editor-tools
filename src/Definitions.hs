@@ -8,6 +8,7 @@ module Definitions
   , Definition(..)
   ) where
 
+import Control.Monad (join)
 import Data.Aeson
 import Data.List
 import Text.Parsec
@@ -85,7 +86,11 @@ restOfLine :: DefParser String
 restOfLine = manyTill anyChar endOfFileOrLine
 
 destructuredAssignment :: DefParser [Definition]
-destructuredAssignment = destructuredRecord <|> destructuredTuple
+destructuredAssignment = destructuredContent <* whitespace <* char '='
+
+destructuredContent :: DefParser [Definition]
+destructuredContent =
+  choice [destructuredRecord, destructuredTuple, pure <$> variable]
 
 destructuredRecord :: DefParser [Definition]
 destructuredRecord = do
@@ -95,8 +100,6 @@ destructuredRecord = do
     sepBy variable (try $ whitespace >> char ',' >> whitespace)
   _ <- whitespace
   _ <- char '}'
-  _ <- whitespace
-  _ <- char '='
   return recordDefinitions
 
 destructuredTuple :: DefParser [Definition]
@@ -104,11 +107,10 @@ destructuredTuple = do
   _ <- char '('
   _ <- whitespace
   recordDefinitions <-
-    sepBy variable (try $ whitespace >> char ',' >> whitespace)
+    join <$>
+    sepBy destructuredContent (try $ whitespace >> char ',' >> whitespace)
   _ <- whitespace
   _ <- char ')'
-  _ <- whitespace
-  _ <- char '='
   return recordDefinitions
 
 topFunction :: DefParser Definition
