@@ -121,7 +121,7 @@ topFunction = do
 var :: DefParser Definition
 var = do
   location <- getLocation
-  name <- operator <|> lowerCasedWord
+  name <- infixOperator <|> lowerCasedWord
   return (TopFunction name location)
 
 sumType :: DefParser [Definition]
@@ -183,11 +183,11 @@ capitalizedWord = do
   rest <- many letter
   return (initial : rest)
 
-operator :: DefParser String
-operator = do
+infixOperator :: DefParser String
+infixOperator = do
   _ <- char '('
   _ <- whitespace
-  op <- many1 (noneOf ")")
+  op <- many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
   _ <- whitespace
   _ <- char ')'
   return op
