@@ -13,35 +13,21 @@
 -- Native modules are supported.
 module Imports
   ( modulePath
-  , Error(..)
   ) where
 
-import Control.Applicative (empty, (<|>), liftA2)
+import Control.Applicative ((<|>), liftA2)
 import Control.Monad (join)
-import Data.Aeson
-import qualified Data.ByteString.Lazy as ByteString
 import Data.List
 import Data.List.Split (splitOn)
+import ElmConfig (ElmJSON(sourceDirectories), readElmJSON)
+import Error
 import Path
 import Path.IO
-
-data ElmJSON = ElmJSON
-  { sourceDirectories :: [FilePath]
-  } deriving (Show)
-
-instance FromJSON ElmJSON where
-  parseJSON (Object v) = ElmJSON <$> v .: "source-directories"
-  parseJSON _ = empty
-
-data Error
-  = CouldNotFindElmJSON
-  | CouldNotParseElmJSON FilePath
-  | CouldNotFindModule
 
 modulePath :: FilePath -> String -> IO (Either Error FilePath)
 modulePath fromFile moduleName = do
   elmJSONPath <- getDirPath fromFile >>= getElmJSONPath
-  elmJSON <- fmap join $ traverse getElmJSON elmJSONPath
+  elmJSON <- fmap join $ traverse readElmJSON elmJSONPath
   sources <- sequence $ (liftA2 getSourceDirectories) elmJSONPath elmJSON
   finalPath <- fmap join $ traverse (findModuleInRoots moduleName) sources
   return $ fmap toFilePath finalPath
@@ -62,23 +48,6 @@ getSourceDirectories elmJSONPath = traverse parseToRoot . sourceDirectories
     parseToRoot path = do
       relDir <- parseRelDir path
       return $ (parent elmJSONPath) </> relDir
-
-getElmJSON :: Path Abs File -> IO (Either Error ElmJSON)
-getElmJSON elmJSONPath = do
-  jsonString <- ByteString.readFile (toFilePath elmJSONPath)
-  return $ decodeElmJSON elmJSONPath jsonString
-
-decodeElmJSON :: Path Abs File -> ByteString.ByteString -> Either Error ElmJSON
-decodeElmJSON elmJSONPath jsonString =
-  mapLeft
-    (const $ CouldNotParseElmJSON (toFilePath elmJSONPath))
-    (eitherDecode jsonString)
-
-mapLeft :: (a -> b) -> Either a x -> Either b x
-mapLeft fn either' =
-  case either' of
-    Left x -> Left (fn x)
-    Right x -> Right x
 
 relOnRoot :: Path Rel File -> Path Abs Dir -> IO (Maybe (Path Abs File))
 relOnRoot filePath rootDir = do
