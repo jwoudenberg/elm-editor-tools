@@ -30,6 +30,8 @@ resolveModule fromFile moduleName = do
     Left (Lib.CouldNotParseElmJSON elmJSONPath) ->
       exitWithError $
       "Could not parse elm-package.json found at: \"" ++ elmJSONPath
+    Left Lib.CouldNotFindModule ->
+      exitWithError $ "Could not find module: " ++ moduleName
     Right resolvedPath -> putStrLn resolvedPath
 
 usage :: String

@@ -16,8 +16,7 @@ module Imports
   , Error(..)
   ) where
 
-import Control.Applicative (empty, (<|>))
-import Control.Exception.Base (throwIO)
+import Control.Applicative (empty, (<|>), liftA2)
 import Control.Monad (join)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as ByteString
@@ -37,26 +36,24 @@ instance FromJSON ElmJSON where
 data Error
   = CouldNotFindElmJSON
   | CouldNotParseElmJSON FilePath
+  | CouldNotFindModule
 
 modulePath :: FilePath -> String -> IO (Either Error FilePath)
 modulePath fromFile moduleName = do
   elmJSONPath <- getDirPath fromFile >>= getElmJSONPath
   elmJSON <- fmap join $ traverse getElmJSON elmJSONPath
   sources <- sequence $ (pure getSourceDirectories) <*> elmJSONPath <*> elmJSON
-  finalPath <- traverse (findModuleInRoots moduleName) sources
+  finalPath <- fmap join $ traverse (findModuleInRoots moduleName) sources
   return $ fmap toFilePath finalPath
 
-findModuleInRoots :: String -> [Path Abs Dir] -> IO (Path Abs File)
-findModuleInRoots moduleName rootDirs
-  -- TODO: Clean up the code below to make it easier to read.
-  -- TODO: Search through dependencies too.
- =
-  foldr
-    (<|>)
-    (throwIO $ userError "File not found")
-    (map (relOnRoot relModulePath) rootDirs)
-  where
-    relModulePath = moduleAsPath moduleName
+findModuleInRoots :: String
+                  -> [Path Abs Dir]
+                  -> IO (Either Error (Path Abs File))
+findModuleInRoots moduleName rootDirs = do
+  let relModulePath = moduleAsPath moduleName
+  let candidatePaths = map (relOnRoot relModulePath) rootDirs
+  maybePath <- foldr (liftA2 (<|>)) (pure Nothing) candidatePaths
+  return $ maybe (Left CouldNotFindModule) pure maybePath
 
 getSourceDirectories :: Path Abs File -> ElmJSON -> IO [Path Abs Dir]
 getSourceDirectories elmJSONPath = traverse parseToRoot . sourceDirectories
@@ -83,12 +80,12 @@ mapLeft fn either' =
     Left x -> Left (fn x)
     Right x -> Right x
 
-relOnRoot :: Path Rel File -> Path Abs Dir -> IO (Path Abs File)
+relOnRoot :: Path Rel File -> Path Abs Dir -> IO (Maybe (Path Abs File))
 relOnRoot filePath rootDir = do
   exists <- doesFileExist absFilePath
   if exists
-    then return absFilePath
-    else throwIO (userError "File not found")
+    then return (Just absFilePath)
+    else return Nothing
   where
     absFilePath = rootDir </> filePath
 
