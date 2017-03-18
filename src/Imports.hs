@@ -79,12 +79,11 @@ candidate filePath =
       else return Nothing
 
 getSourceDirs :: Path Abs Dir -> ElmJSON -> App [Path Abs Dir]
-getSourceDirs projectRoot = traverse parseToRoot . sourceDirectories
+getSourceDirs projectRoot elmJSON =
+  traverse parseToRoot $ sourceDirectories elmJSON
   where
     parseToRoot :: FilePath -> App (Path Abs Dir)
-    parseToRoot path = do
-      relDir <- parseRelDir path
-      return $ projectRoot </> relDir
+    parseToRoot path = resolveDir projectRoot path
 
 getDirPath :: FilePath -> App (Path Abs Dir)
 getDirPath path = do
