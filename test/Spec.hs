@@ -18,7 +18,10 @@ topLevelFunctionTests =
   testGroup
     "top level functions"
     [ t "top level function" "foo = 42" [topFunction "foo" 1 1]
-    , t "with arguments" "foo (One thing) int = 42" [topFunction "foo" 1 1]
+    , t
+        "with arguments"
+        "foo (One thing) { field } int = 42"
+        [topFunction "foo" 1 1]
     , t "no whitespace" "foo=42" [topFunction "foo" 1 1]
     , t "much whitespace" "foo   =\t42" [topFunction "foo" 1 1]
     , t "broken across lines" "foo =\n 42" [topFunction "foo" 1 1]
@@ -30,6 +33,7 @@ topLevelFunctionTests =
         "tailing content"
         "foo = 42 and some more stuff\nanother line"
         [topFunction "foo" 1 1]
+    , t "infix operator" "(<>) = something" [topFunction "<>" 1 2]
     , t
         "destructured record"
         "{ foo, bar } = something"
@@ -74,24 +78,24 @@ typeAliasTests :: TestTree
 typeAliasTests =
   testGroup
     "type aliases"
-    [ t "type alias" "type alias Foo = Bar" [typeAlias "Foo" 1 1]
-    , t "much whitespace" "type  alias  Foo  =  Bar" [typeAlias "Foo" 1 1]
+    [ t "type alias" "type alias Foo = Bar" [typeAlias "Foo" 1 12]
+    , t "much whitespace" "type  alias  Foo  =  Bar" [typeAlias "Foo" 1 14]
     , t
         "broken across lines"
         "type\n alias\n Foo\n =\n Bar"
-        [typeAlias "Foo" 1 1]
+        [typeAlias "Foo" 3 2]
     , t
         "non-first line"
         "a line\nanother line\ntype alias Foo = Bar"
-        [typeAlias "Foo" 3 1]
+        [typeAlias "Foo" 3 12]
     , t
         "tailing content"
         "type alias Foo = Bar and some more stuff\nanother line"
-        [typeAlias "Foo" 1 1]
+        [typeAlias "Foo" 1 12]
     , t
         "with type parameters"
         "type alias Foo a b = Bar (Maybe Int) extra"
-        [typeAlias "Foo" 1 1]
+        [typeAlias "Foo" 1 12]
     ]
 
 combinationTests :: TestTree
@@ -109,19 +113,19 @@ combinationTests =
     , t
         "top level function followed by type alias"
         "foo = 42\ntype alias Foo = Bar"
-        [topFunction "foo" 1 1, typeAlias "Foo" 2 1]
+        [topFunction "foo" 1 1, typeAlias "Foo" 2 12]
     , t
         "type alias followed by top level function"
         "type alias Foo = Bar\nfoo = 42"
-        [typeAlias "Foo" 1 1, topFunction "foo" 2 1]
+        [typeAlias "Foo" 1 12, topFunction "foo" 2 1]
     , t
         "type alias followed by sum type"
         "type alias Foo = Bar\ntype Bar = Baz"
-        [typeAlias "Foo" 1 1, typeConstructor "Baz" 2 12]
+        [typeAlias "Foo" 1 12, typeConstructor "Baz" 2 12]
     , t
         "sum type folloed by type alias"
         "type Bar = Baz\ntype alias Foo = Bar"
-        [typeConstructor "Baz" 1 12, typeAlias "Foo" 2 1]
+        [typeConstructor "Baz" 1 12, typeAlias "Foo" 2 12]
     ]
 
 topFunction :: String -> Int -> Int -> Definition

@@ -93,34 +93,13 @@ destructuredContent =
   choice [destructuredRecord, destructuredTuple, pure <$> variable]
 
 destructuredRecord :: DefParser [Definition]
-destructuredRecord = do
-  _ <- char '{'
-  _ <- whitespace
-  recordDefinitions <-
-    sepBy variable (try $ whitespace >> char ',' >> whitespace)
-  _ <- whitespace
-  _ <- char '}'
-  return recordDefinitions
+destructuredRecord = inCurlyBraces $ sepBy variable (try comma)
 
 destructuredTuple :: DefParser [Definition]
-destructuredTuple = do
-  _ <- char '('
-  _ <- whitespace
-  recordDefinitions <-
-    join <$>
-    sepBy destructuredContent (try $ whitespace >> char ',' >> whitespace)
-  _ <- whitespace
-  _ <- char ')'
-  return recordDefinitions
+destructuredTuple = inBraces $ join <$> sepBy destructuredContent (try comma)
 
 topFunction :: DefParser Definition
-topFunction = do
-  definition <- infixOperator <|> variable
-  _ <- whitespace
-  _ <-
-    many $ (try whitespace1 >> pure 'x') <|> alphaNum <|> char '(' <|> char ')'
-  _ <- char '='
-  return definition
+topFunction = infixOperator <|> variable <* whitespace <* arguments <* char '='
 
 variable :: DefParser Definition
 variable = (pure $ flip TopFunction) <*> getLocation <*> lowerCasedWord
@@ -128,7 +107,7 @@ variable = (pure $ flip TopFunction) <*> getLocation <*> lowerCasedWord
 sumType :: DefParser [Definition]
 sumType = do
   _ <- string "type"
-  _ <- whitespace1 >> notTopLevel
+  _ <- whitespace1
   _ <- typeDefinition
   _ <- whitespace
   _ <- char '='
@@ -139,13 +118,11 @@ sumType = do
 
 typeAlias :: DefParser Definition
 typeAlias = do
-  location <- getLocation
-  _ <- string "type"
-  _ <- whitespace1
-  _ <- string "alias"
-  _ <- whitespace1
-  name <- capitalizedWord
-  return (TypeAlias name location)
+  _ <- typeAliasKeyword
+  return (flip TypeAlias) <*> getLocation <*> capitalizedWord
+  where
+    typeAliasKeyword =
+      string "type" >> whitespace1 >> string "alias" >> whitespace1
 
 typeDefinition :: DefParser String
 typeDefinition = do
@@ -155,12 +132,8 @@ typeDefinition = do
   return $ concat $ intersperse " " $ baseType : (maybe [] id typeParams)
 
 typeConstructor :: DefParser Definition
-typeConstructor = do
-  location <- getLocation
-  name <- capitalizedWord
-  _ <-
-    many $ (try whitespace1 >> pure 'x') <|> alphaNum <|> char '(' <|> char ')'
-  return (TypeConstructor name location)
+typeConstructor =
+  pure (flip TypeConstructor) <*> getLocation <*> capitalizedWord <* arguments
 
 getLocation :: DefParser Location
 getLocation = do
@@ -185,14 +158,27 @@ capitalizedWord = do
   return (initial : rest)
 
 infixOperator :: DefParser Definition
-infixOperator = do
-  location <- getLocation
-  _ <- char '('
-  _ <- whitespace
-  name <- many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
-  _ <- whitespace
-  _ <- char ')'
-  return (TopFunction name location)
+infixOperator = inBraces operator
+
+operator :: DefParser Definition
+operator =
+  pure (flip TopFunction) <*> getLocation <*>
+  many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
+
+-- I'm not interested in parsing arguments at this moment, except to know when the argument list is over.
+arguments :: DefParser ()
+arguments = do
+  _ <-
+    many $
+    choice
+      [ try whitespace1 >> pure 'x'
+      , alphaNum
+      , char '('
+      , char ')'
+      , char '{'
+      , char '}'
+      ]
+  return ()
 
 -- When using whitespace, always ensure it does not end us on the start of the next line.
 -- This would indicate a new definition, which means we need to release control to the top level parser.
@@ -204,3 +190,13 @@ whitespace1 = space >> whitespace
 
 endOfFileOrLine :: DefParser ()
 endOfFileOrLine = (endOfLine >> pure ()) <|> eof
+
+comma :: DefParser ()
+comma = whitespace >> char ',' >> whitespace
+
+inBraces :: DefParser a -> DefParser a
+inBraces parser = char '(' *> whitespace *> parser <* whitespace <* char ')'
+
+inCurlyBraces :: DefParser a -> DefParser a
+inCurlyBraces parser =
+  char '{' *> whitespace *> parser <* whitespace <* char '}'
