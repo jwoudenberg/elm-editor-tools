@@ -79,19 +79,20 @@ line_ = do
 
 declarationParsers :: [DefParser [Definition]]
 declarationParsers =
-  [pure <$> typeAlias, sumType, constants, pure <$> topFunction]
+  [pure <$> typeAlias, sumType, destructuredAssignment, pure <$> topFunction]
 
 restOfLine :: DefParser String
 restOfLine = manyTill anyChar endOfFileOrLine
 
-constants :: DefParser [Definition]
-constants = destructuredRecord <|> destructuredTuple
+destructuredAssignment :: DefParser [Definition]
+destructuredAssignment = destructuredRecord <|> destructuredTuple
 
 destructuredRecord :: DefParser [Definition]
 destructuredRecord = do
   _ <- char '{'
   _ <- whitespace
-  recordDefinitions <- sepBy var (try $ whitespace >> char ',' >> whitespace)
+  recordDefinitions <-
+    sepBy variable (try $ whitespace >> char ',' >> whitespace)
   _ <- whitespace
   _ <- char '}'
   _ <- whitespace
@@ -102,7 +103,8 @@ destructuredTuple :: DefParser [Definition]
 destructuredTuple = do
   _ <- char '('
   _ <- whitespace
-  recordDefinitions <- sepBy var (try $ whitespace >> char ',' >> whitespace)
+  recordDefinitions <-
+    sepBy variable (try $ whitespace >> char ',' >> whitespace)
   _ <- whitespace
   _ <- char ')'
   _ <- whitespace
@@ -111,18 +113,15 @@ destructuredTuple = do
 
 topFunction :: DefParser Definition
 topFunction = do
-  definition <- var
+  definition <- infixOperator <|> variable
   _ <- whitespace
   _ <-
     many $ (try whitespace1 >> pure 'x') <|> alphaNum <|> char '(' <|> char ')'
   _ <- char '='
   return definition
 
-var :: DefParser Definition
-var = do
-  location <- getLocation
-  name <- infixOperator <|> lowerCasedWord
-  return (TopFunction name location)
+variable :: DefParser Definition
+variable = (pure $ flip TopFunction) <*> getLocation <*> lowerCasedWord
 
 sumType :: DefParser [Definition]
 sumType = do
@@ -183,14 +182,15 @@ capitalizedWord = do
   rest <- many letter
   return (initial : rest)
 
-infixOperator :: DefParser String
+infixOperator :: DefParser Definition
 infixOperator = do
+  location <- getLocation
   _ <- char '('
   _ <- whitespace
-  op <- many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
+  name <- many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
   _ <- whitespace
   _ <- char ')'
-  return op
+  return (TopFunction name location)
 
 -- When using whitespace, always ensure it does not end us on the start of the next line.
 -- This would indicate a new definition, which means we need to release control to the top level parser.
