@@ -29,7 +29,10 @@ resolveModule fromFile moduleName = do
       fromFile ++ "\" in an instantiated elm project?"
     Left (Lib.CouldNotParseElmJSON elmJSONPath) ->
       exitWithError $
-      "Could not parse elm-package.json found at: \"" ++ elmJSONPath
+      "Could not parse elm-package.json found at: " ++ elmJSONPath
+    Left (Lib.CouldNotParseDepsJSON depsJSONPath) ->
+      exitWithError $
+      "Could not parse exact-dependencies.json found at: " ++ depsJSONPath
     Left Lib.CouldNotFindModule ->
       exitWithError $ "Could not find module: " ++ moduleName
     Right resolvedPath -> putStrLn resolvedPath
