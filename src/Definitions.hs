@@ -54,12 +54,12 @@ instance ToJSON Definition where
 
 type DefParser result = IndentParser String () result
 
-elmParser :: String -> IO (Either ParseError [Definition])
+elmParser :: FilePath -> IO (Either ParseError [Definition])
 elmParser fileName_ = do
   input <- readFile fileName_
   return (parseString fileName_ input)
 
-parseString :: String -> String -> Either ParseError [Definition]
+parseString :: FilePath -> String -> Either ParseError [Definition]
 parseString fileName_ fileContent =
   runIndentParser definitions () fileName_ fileContent
 
