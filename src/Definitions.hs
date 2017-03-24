@@ -83,18 +83,17 @@ declarationParsers =
   [pure <$> typeAlias, sumType, destructuredAssignment, pure <$> topFunction]
 
 restOfLine :: DefParser ()
-restOfLine =
-  manyTill (try comment <|> anyChar *> pure ()) endOfFileOrLine *> pure ()
+restOfLine = dump $ manyTill (try comment <|> dump anyChar) endOfFileOrLine
 
 comment :: DefParser ()
 comment = string "{-" *> commentContentsAndEnd
 
 commentContentsAndEnd :: DefParser ()
 commentContentsAndEnd =
-  manyTill (try comment <|> anyChar *> pure ()) commentBlockEnd *> pure ()
+  dump $ manyTill (try comment <|> dump anyChar) commentBlockEnd
 
 commentBlockEnd :: DefParser ()
-commentBlockEnd = eof <|> string "-}" *> pure ()
+commentBlockEnd = eof <|> dump (string "-}")
 
 destructuredAssignment :: DefParser [Definition]
 destructuredAssignment = destructuredContent <* whitespace <* char '='
@@ -200,7 +199,7 @@ whitespace1 :: DefParser ()
 whitespace1 = space >> whitespace
 
 endOfFileOrLine :: DefParser ()
-endOfFileOrLine = (endOfLine >> pure ()) <|> eof
+endOfFileOrLine = dump endOfLine <|> eof
 
 comma :: DefParser ()
 comma = whitespace >> char ',' >> whitespace
@@ -211,3 +210,6 @@ inBraces parser = char '(' *> whitespace *> parser <* whitespace <* char ')'
 inCurlyBraces :: DefParser a -> DefParser a
 inCurlyBraces parser =
   char '{' *> whitespace *> parser <* whitespace <* char '}'
+
+dump :: DefParser a -> DefParser ()
+dump parser = parser *> pure ()
