@@ -82,8 +82,19 @@ declarationParsers :: [DefParser [Definition]]
 declarationParsers =
   [pure <$> typeAlias, sumType, destructuredAssignment, pure <$> topFunction]
 
-restOfLine :: DefParser String
-restOfLine = manyTill anyChar endOfFileOrLine
+restOfLine :: DefParser ()
+restOfLine =
+  manyTill (try comment <|> anyChar *> pure ()) endOfFileOrLine *> pure ()
+
+comment :: DefParser ()
+comment = string "{-" *> commentContentsAndEnd
+
+commentContentsAndEnd :: DefParser ()
+commentContentsAndEnd =
+  manyTill (try comment <|> anyChar *> pure ()) commentBlockEnd *> pure ()
+
+commentBlockEnd :: DefParser ()
+commentBlockEnd = eof <|> string "-}" *> pure ()
 
 destructuredAssignment :: DefParser [Definition]
 destructuredAssignment = destructuredContent <* whitespace <* char '='

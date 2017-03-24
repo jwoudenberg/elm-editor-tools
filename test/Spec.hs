@@ -11,7 +11,12 @@ tests :: TestTree
 tests =
   testGroup
     "parseTests"
-    [topLevelFunctionTests, sumTypeTests, typeAliasTests, combinationTests]
+    [ topLevelFunctionTests
+    , sumTypeTests
+    , typeAliasTests
+    , combinationTests
+    , commentTests
+    ]
 
 topLevelFunctionTests :: TestTree
 topLevelFunctionTests =
@@ -126,6 +131,19 @@ combinationTests =
         "sum type folloed by type alias"
         "type Bar = Baz\ntype alias Foo = Bar"
         [typeConstructor "Baz" 1 12, typeAlias "Foo" 2 12]
+    ]
+
+commentTests :: TestTree
+commentTests =
+  testGroup
+    "comments"
+    [ t "commented definition" "{-\nfoo = 42-}" []
+    , t
+        "definition after comment"
+        "{-some stuff in here-}\nfoo = 42"
+        [topFunction "foo" 2 1]
+    , t "comment until end of file" "{-\nfoo = 42" []
+    , t "nested comment blocks" "{-{--}\nfoo = 42-}" []
     ]
 
 topFunction :: String -> Int -> Int -> Definition
