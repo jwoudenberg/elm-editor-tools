@@ -4,6 +4,7 @@
 module Definitions
   ( elmParser
   , parseString
+  , findDefinition
   , Location(..)
   , Definition(..)
   ) where
@@ -11,6 +12,7 @@ module Definitions
 import Control.Monad (join)
 import Data.Aeson
 import Data.List
+import Error
 import Text.Parsec
 import Text.Parsec.Indent
 
@@ -54,14 +56,40 @@ instance ToJSON Definition where
 
 type DefParser result = IndentParser String () result
 
+findDefinition :: FilePath -> String -> IO (Either Error Definition)
+findDefinition filePath name = do
+  parseResult <- elmParser filePath
+  return $ do
+    defs <- mapLeft (CouldNotParseElmModule filePath . show) parseResult
+    findDef name defs
+
+mapLeft :: (a -> b) -> Either a c -> Either b c
+mapLeft fn either_ =
+  case either_ of
+    Left x -> Left (fn x)
+    Right y -> Right y
+
+findDef :: String -> [Definition] -> Either Error Definition
+findDef name defs =
+  case find ((==) name . defName) defs of
+    Nothing -> Left (CouldNotFindDefinition name)
+    Just def -> Right def
+
+defName :: Definition -> String
+defName def =
+  case def of
+    TopFunction name _ -> name
+    TypeConstructor name _ -> name
+    TypeAlias name _ -> name
+
 elmParser :: FilePath -> IO (Either ParseError [Definition])
-elmParser fileName_ = do
-  input <- readFile fileName_
-  return (parseString fileName_ input)
+elmParser filePath = do
+  input <- readFile filePath
+  return (parseString filePath input)
 
 parseString :: FilePath -> String -> Either ParseError [Definition]
-parseString fileName_ fileContent =
-  runIndentParser definitions () fileName_ fileContent
+parseString filePath fileContent =
+  runIndentParser definitions () filePath fileContent
 
 definitions :: DefParser [Definition]
 definitions = do

@@ -32,9 +32,9 @@ library
                      , Error
                      , ElmConfig
 
-executable elm-find-definitions
+executable elm-find-definition
   hs-source-dirs:      app
-  main-is:             FindDefinitions.hs
+  main-is:             FindDefinition.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , elm-editor-tools

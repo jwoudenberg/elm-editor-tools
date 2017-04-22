@@ -12,16 +12,14 @@ main :: IO ()
 main = do
   files <- System.Environment.getArgs
   case files of
-    [] -> putStrLn ("Please provide the path to an elm file")
-    first:_ -> parseFile first
+    [filePath, name] -> find filePath name
+    _ -> putStrLn ("Usage: elm-find-definition <file-path> <name> ")
   return ()
 
-parseFile :: String -> IO ()
-parseFile fileName_ = do
-  result <- elmParser fileName_
+find :: FilePath -> String -> IO ()
+find filePath name = do
+  result <- findDefinition filePath name
   case result of
-    Left parseError -> do
-      _ <- putStrLn ("Parsing failed with: " ++ (show parseError))
-      System.Exit.exitFailure
+    Left err -> System.Exit.die $ show err
     Right definitions ->
       Data.ByteString.Lazy.Char8.putStrLn (Data.Aeson.encode definitions)
