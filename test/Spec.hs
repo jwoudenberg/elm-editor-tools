@@ -146,21 +146,22 @@ commentTests =
     , t "nested comment blocks" "{-{--}\nfoo = 42-}" []
     ]
 
-topFunction :: String -> Int -> Int -> Definition
+topFunction :: String -> Int -> Int -> Declaration
 topFunction name line_ column_ =
-  TopFunction name (Location fileName_ line_ column_)
+  Definition $ TopFunction name (Location fileName_ line_ column_)
 
-typeConstructor :: String -> Int -> Int -> Definition
+typeConstructor :: String -> Int -> Int -> Declaration
 typeConstructor name line_ column_ =
-  TypeConstructor name (Location fileName_ line_ column_)
+  Definition $ TypeConstructor name (Location fileName_ line_ column_)
 
-typeAlias :: String -> Int -> Int -> Definition
-typeAlias name line_ column_ = TypeAlias name (Location fileName_ line_ column_)
+typeAlias :: String -> Int -> Int -> Declaration
+typeAlias name line_ column_ =
+  Definition $ TypeAlias name (Location fileName_ line_ column_)
 
 fileName_ :: String
 fileName_ = "myFile"
 
-t :: String -> String -> [Definition] -> TestTree
+t :: String -> String -> [Declaration] -> TestTree
 t description content definitions =
   testCase description $
   assertEqual description (Right definitions) (parseString fileName_ content)

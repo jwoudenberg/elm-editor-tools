@@ -7,11 +7,15 @@ module Definitions
   , findDefinition
   , Location(..)
   , Definition(..)
+  , Declaration(..)
+  , Import(..)
+  , Exposing(..)
   ) where
 
 import Control.Monad (join)
 import Data.Aeson
 import Data.List
+import qualified Data.Maybe
 import Error
 import Text.Parsec
 import Text.Parsec.Indent
@@ -22,6 +26,11 @@ data Location = Location
   , column :: Int
   } deriving (Show, Eq)
 
+data Declaration
+  = Definition Definition
+  | Import Import
+  deriving (Show, Eq)
+
 data Definition
   = TopFunction String
                 Location
@@ -29,6 +38,17 @@ data Definition
                     Location
   | TypeAlias String
               Location
+  deriving (Show, Eq)
+
+data Import = ImportC
+  { qualifiedName :: String
+  , localName :: String
+  , exposing :: Exposing
+  } deriving (Show, Eq)
+
+data Exposing
+  = All
+  | Selected [String]
   deriving (Show, Eq)
 
 instance ToJSON Definition where
@@ -60,8 +80,15 @@ findDefinition :: FilePath -> String -> IO (Either Error Definition)
 findDefinition filePath name = do
   parseResult <- elmParser filePath
   return $ do
-    defs <- mapLeft (CouldNotParseElmModule filePath . show) parseResult
+    decs <- mapLeft (CouldNotParseElmModule filePath . show) parseResult
+    let defs = Data.Maybe.mapMaybe getDef decs
     findDef name defs
+
+getDef :: Declaration -> Maybe Definition
+getDef declaration =
+  case declaration of
+    Definition def -> Just def
+    Import _ -> Nothing
 
 mapLeft :: (a -> b) -> Either a c -> Either b c
 mapLeft fn either_ =
@@ -82,22 +109,22 @@ defName def =
     TypeConstructor name _ -> name
     TypeAlias name _ -> name
 
-elmParser :: FilePath -> IO (Either ParseError [Definition])
+elmParser :: FilePath -> IO (Either ParseError [Declaration])
 elmParser filePath = do
   input <- readFile filePath
   return (parseString filePath input)
 
-parseString :: FilePath -> String -> Either ParseError [Definition]
+parseString :: FilePath -> String -> Either ParseError [Declaration]
 parseString filePath fileContent =
-  runIndentParser definitions () filePath fileContent
+  runIndentParser declarations () filePath fileContent
 
-definitions :: DefParser [Definition]
-definitions = do
+declarations :: DefParser [Declaration]
+declarations = do
   topLevel
   result <- mconcat <$> manyTill line_ eof
   return result
 
-line_ :: DefParser [Definition]
+line_ :: DefParser [Declaration]
 line_ = do
   (option [] declaration) <* restOfLine
     -- I'd prefer not to have to `try` each definition parser here, but I don't see I have any choice.
@@ -106,9 +133,13 @@ line_ = do
   where
     declaration = choice (fmap try declarationParsers)
 
-declarationParsers :: [DefParser [Definition]]
+declarationParsers :: [DefParser [Declaration]]
 declarationParsers =
-  [pure <$> typeAlias, sumType, destructuredAssignment, pure <$> topFunction]
+  [ pure <$> Definition <$> typeAlias
+  , fmap Definition <$> sumType
+  , fmap Definition <$> destructuredAssignment
+  , pure <$> Definition <$> topFunction
+  ]
 
 restOfLine :: DefParser ()
 restOfLine = dump $ manyTill (try comment <|> dump anyChar) endOfFileOrLine
