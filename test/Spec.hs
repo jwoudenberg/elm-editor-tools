@@ -16,6 +16,7 @@ tests =
     , typeAliasTests
     , combinationTests
     , commentTests
+    , importTests
     ]
 
 topLevelFunctionTests :: TestTree
@@ -146,6 +147,32 @@ commentTests =
     , t "nested comment blocks" "{-{--}\nfoo = 42-}" []
     ]
 
+importTests :: TestTree
+importTests =
+  testGroup
+    "imports functions"
+    [ t
+        "simple import"
+        "import Foo.Bar"
+        [imprt "Foo.Bar" "Foo.Bar" (Selected [])]
+    , t
+        "aliased import"
+        "import Foo.Bar as Bar"
+        [imprt "Foo.Bar" "Bar" (Selected [])]
+    , t
+        "exposing import"
+        "import Foo.Bar exposing (One, two)"
+        [imprt "Foo.Bar" "Foo.Bar" (Selected ["One", "two"])]
+    , t
+        "much whitespace"
+        "import    Foo.Bar  \tas    Bar    exposing   ( One  ,  two )"
+        [imprt "Foo.Bar" "Bar" (Selected ["One", "two"])]
+    , t
+        "broken across lines"
+        "import Foo.Bar exposing\n (\n One, two)"
+        [imprt "Foo.Bar" "Foo.Bar" (Selected ["One", "two"])]
+    ]
+
 topFunction :: String -> Int -> Int -> Declaration
 topFunction name line_ column_ =
   Definition $ TopFunction name (Location fileName_ line_ column_)
@@ -157,6 +184,10 @@ typeConstructor name line_ column_ =
 typeAlias :: String -> Int -> Int -> Declaration
 typeAlias name line_ column_ =
   Definition $ TypeAlias name (Location fileName_ line_ column_)
+
+imprt :: String -> String -> Exposing -> Declaration
+imprt qualiedName localName_ exposing_ =
+  Import $ ImportC qualiedName localName_ exposing_
 
 fileName_ :: String
 fileName_ = "myFile"

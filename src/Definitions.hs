@@ -135,7 +135,8 @@ line_ = do
 
 declarationParsers :: [DefParser [Declaration]]
 declarationParsers =
-  [ pure <$> Definition <$> typeAlias
+  [ pure <$> Import <$> import_
+  , pure <$> Definition <$> typeAlias
   , fmap Definition <$> sumType
   , fmap Definition <$> destructuredAssignment
   , pure <$> Definition <$> topFunction
@@ -185,6 +186,21 @@ sumType = do
     sepBy typeConstructor (try $ whitespace >> char '|' >> whitespace)
   return typeConstructors
 
+import_ :: DefParser Import
+import_ = do
+  _ <- string "import"
+  _ <- whitespace1
+  qualifiedName_ <- moduleName
+  alias <-
+    optionMaybe $
+    try $ whitespace1 *> string "as" *> whitespace1 *> capitalizedWord
+  let localName_ = maybe qualifiedName_ id alias
+  maybeExposed <-
+    optionMaybe $
+    try $ whitespace1 *> string "exposing" *> whitespace1 *> exposing_
+  let exposed = maybe (Selected []) id maybeExposed
+  return $ ImportC qualifiedName_ localName_ exposed
+
 typeAlias :: DefParser Definition
 typeAlias = do
   _ <- typeAliasKeyword
@@ -225,6 +241,14 @@ capitalizedWord = do
   initial <- upper
   rest <- many letter
   return (initial : rest)
+
+moduleName :: DefParser String
+moduleName = mconcat <$> intersperse "." <$> sepBy capitalizedWord (string ".")
+
+exposing_ :: DefParser Exposing
+exposing_ =
+  Selected <$>
+  (inBraces $ sepBy (capitalizedWord <|> lowerCasedWord) (try comma))
 
 infixOperator :: DefParser Definition
 infixOperator = inBraces operator
