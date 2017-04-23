@@ -15,7 +15,7 @@ module Definitions
 import Control.Monad (join)
 import Data.Aeson
 import Data.List
-import qualified Data.Maybe
+import Data.Maybe (mapMaybe, fromMaybe)
 import Error
 import Text.Parsec
 import Text.Parsec.Indent
@@ -81,7 +81,7 @@ findDefinition filePath name = do
   parseResult <- elmParser filePath
   return $ do
     decs <- mapLeft (CouldNotParseElmModule filePath . show) parseResult
-    let defs = Data.Maybe.mapMaybe getDef decs
+    let defs = mapMaybe getDef decs
     findDef name defs
 
 getDef :: Declaration -> Maybe Definition
@@ -135,7 +135,7 @@ line_ = do
 
 declarationParsers :: [DefParser [Declaration]]
 declarationParsers =
-  [ pure <$> Import <$> import_
+  [ pure <$> Import <$> importStatement
   , pure <$> Definition <$> typeAlias
   , fmap Definition <$> sumType
   , fmap Definition <$> destructuredAssignment
@@ -176,30 +176,29 @@ variable = (pure $ flip TopFunction) <*> getLocation <*> lowerCasedWord
 
 sumType :: DefParser [Definition]
 sumType = do
-  _ <- string "type"
-  _ <- whitespace1
-  _ <- typeDefinition
-  _ <- whitespace
-  _ <- char '='
-  _ <- whitespace
-  typeConstructors <-
-    sepBy typeConstructor (try $ whitespace >> char '|' >> whitespace)
-  return typeConstructors
+  typeKey *> typeDefinition *> equalSign *> constructors
+  where
+    typeKey = string "type" *> whitespace1
+    equalSign = whitespace *> char '=' *> whitespace
+    constructors =
+      sepBy typeConstructor (try $ whitespace >> char '|' >> whitespace)
 
-import_ :: DefParser Import
-import_ = do
-  _ <- string "import"
-  _ <- whitespace1
-  qualifiedName_ <- moduleName
-  alias <-
-    optionMaybe $
-    try $ whitespace1 *> string "as" *> whitespace1 *> capitalizedWord
-  let localName_ = maybe qualifiedName_ id alias
-  maybeExposed <-
-    optionMaybe $
-    try $ whitespace1 *> string "exposing" *> whitespace1 *> exposing_
-  let exposed = maybe (Selected []) id maybeExposed
-  return $ ImportC qualifiedName_ localName_ exposed
+importStatement :: DefParser Import
+importStatement =
+  importKey *> (pure importDef) <*> moduleName <*> asClause <*> exposingClause
+  where
+    importKey = string "import" *> whitespace1
+    asClause =
+      optionMaybe $
+      try $ whitespace1 *> string "as" *> whitespace1 *> capitalizedWord
+    exposingClause =
+      optionMaybe $
+      try $ whitespace1 *> string "exposing" *> whitespace1 *> exposedList
+    importDef name maybeAlias maybeExposed =
+      ImportC
+        name
+        (fromMaybe name maybeAlias)
+        (fromMaybe (Selected []) maybeExposed)
 
 typeAlias :: DefParser Definition
 typeAlias = do
@@ -245,22 +244,23 @@ capitalizedWord = do
 moduleName :: DefParser String
 moduleName = mconcat <$> intersperse "." <$> sepBy capitalizedWord (string ".")
 
-exposing_ :: DefParser Exposing
-exposing_ =
+exposedList :: DefParser Exposing
+exposedList =
   Selected . mconcat <$>
-  (inBraces $ sepBy (exposedType <|> pure <$> lowerCasedWord) (try comma))
+  (inBraces $ sepBy (exposedSumType <|> pure <$> lowerCasedWord) (try comma))
 
-exposedType :: DefParser [String]
-exposedType =
+exposedSumType :: DefParser [String]
+exposedSumType =
   choice
-    [ try $
-      capitalizedWord *> whitespace *>
-      inBraces (sepBy capitalizedWord (try comma))
-    , try $
-      pure (\word -> [word ++ "(..)"]) <*> capitalizedWord <*
-      (whitespace *> inBraces (string ".."))
+    [ try $ capitalizedWord *> whitespace *> exposedConstructors
+    , try $ pure <$> (pure (++) <*> capitalizedWord <* whitespace <*> exposeAll)
     , pure <$> capitalizedWord
     ]
+  where
+    exposedConstructors = inBraces (sepBy capitalizedWord (try comma))
+
+exposeAll :: DefParser String
+exposeAll = inBraces (string "..") *> pure "(..)"
 
 infixOperator :: DefParser Definition
 infixOperator = inBraces operator
