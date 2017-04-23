@@ -247,8 +247,20 @@ moduleName = mconcat <$> intersperse "." <$> sepBy capitalizedWord (string ".")
 
 exposing_ :: DefParser Exposing
 exposing_ =
-  Selected <$>
-  (inBraces $ sepBy (capitalizedWord <|> lowerCasedWord) (try comma))
+  Selected . mconcat <$>
+  (inBraces $ sepBy (exposedType <|> pure <$> lowerCasedWord) (try comma))
+
+exposedType :: DefParser [String]
+exposedType =
+  choice
+    [ try $
+      capitalizedWord *> whitespace *>
+      inBraces (sepBy capitalizedWord (try comma))
+    , try $
+      pure (\word -> [word ++ "(..)"]) <*> capitalizedWord <*
+      (whitespace *> inBraces (string ".."))
+    , pure <$> capitalizedWord
+    ]
 
 infixOperator :: DefParser Definition
 infixOperator = inBraces operator

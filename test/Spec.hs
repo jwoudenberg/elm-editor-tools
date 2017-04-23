@@ -151,22 +151,24 @@ importTests :: TestTree
 importTests =
   testGroup
     "imports functions"
-    [ t
-        "simple import"
-        "import Foo.Bar"
-        [imprt "Foo.Bar" "Foo.Bar" (Selected [])]
+    [ t "simple" "import Foo.Bar" [imprt "Foo.Bar" "Foo.Bar" (Selected [])]
+    , t "aliased" "import Foo.Bar as Bar" [imprt "Foo.Bar" "Bar" (Selected [])]
     , t
-        "aliased import"
-        "import Foo.Bar as Bar"
-        [imprt "Foo.Bar" "Bar" (Selected [])]
-    , t
-        "exposing import"
+        "exposing"
         "import Foo.Bar exposing (One, two)"
         [imprt "Foo.Bar" "Foo.Bar" (Selected ["One", "two"])]
     , t
+        "exposing some sum type constructors"
+        "import Foo.Bar exposing (One(Two))"
+        [imprt "Foo.Bar" "Foo.Bar" (Selected ["Two"])]
+    , t
+        "exposing all sum type constructors"
+        "import Foo.Bar exposing (One(..))"
+        [imprt "Foo.Bar" "Foo.Bar" (Selected ["One(..)"])]
+    , t
         "much whitespace"
-        "import    Foo.Bar  \tas    Bar    exposing   ( One  ,  two )"
-        [imprt "Foo.Bar" "Bar" (Selected ["One", "two"])]
+        "import    Foo.Bar  \tas    Bar    exposing   ( One  ,  Two ( Three ) )"
+        [imprt "Foo.Bar" "Bar" (Selected ["One", "Three"])]
     , t
         "broken across lines"
         "import Foo.Bar exposing\n (\n One, two)"
