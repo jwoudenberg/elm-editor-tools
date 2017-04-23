@@ -158,6 +158,10 @@ importTests =
         "import Foo.Bar exposing (One, two)"
         [imprt "Foo.Bar" "Foo.Bar" (Selected ["One", "two"])]
     , t
+        "exposing everything"
+        "import Foo.Bar exposing (..)"
+        [imprt "Foo.Bar" "Foo.Bar" All]
+    , t
         "exposing some sum type constructors"
         "import Foo.Bar exposing (One(Two))"
         [imprt "Foo.Bar" "Foo.Bar" (Selected ["Two"])]

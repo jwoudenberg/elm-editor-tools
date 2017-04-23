@@ -246,8 +246,12 @@ moduleName = mconcat <$> intersperse "." <$> sepBy capitalizedWord (string ".")
 
 exposedList :: DefParser Exposing
 exposedList =
-  Selected . mconcat <$>
-  (inBraces $ sepBy (exposedSumType <|> pure <$> lowerCasedWord) (try comma))
+  choice
+    [ try $ exposeAll *> pure All
+    , Selected . mconcat <$> (inBraces $ sepBy exposedValue (try comma))
+    ]
+  where
+    exposedValue = exposedSumType <|> pure <$> lowerCasedWord
 
 exposedSumType :: DefParser [String]
 exposedSumType =
