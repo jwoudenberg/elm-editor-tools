@@ -103,7 +103,9 @@ topFunction :: DefParser Definition
 topFunction = infixOperator <|> variable <* whitespace <* arguments <* char '='
 
 variable :: DefParser Definition
-variable = (pure $ DefinitionC Function) <*> getLocation <*> lowerCasedWord
+variable = pure fn <*> getLocation <*> lowerCasedWord
+  where
+    fn = DefinitionC Function Global
 
 sumType :: DefParser [Definition]
 sumType = do
@@ -134,8 +136,9 @@ importStatement =
 typeAlias :: DefParser Definition
 typeAlias = do
   _ <- typeAliasKeyword
-  return (DefinitionC TypeAlias) <*> getLocation <*> capitalizedWord
+  return alias <*> getLocation <*> capitalizedWord
   where
+    alias = DefinitionC TypeAlias Global
     typeAliasKeyword =
       string "type" >> whitespace1 >> string "alias" >> whitespace1
 
@@ -148,8 +151,9 @@ typeDefinition = do
 
 typeConstructor :: DefParser Definition
 typeConstructor =
-  pure (DefinitionC TypeConstructor) <*> getLocation <*> capitalizedWord <*
-  arguments
+  pure typeConstructor' <*> getLocation <*> capitalizedWord <* arguments
+  where
+    typeConstructor' = DefinitionC TypeConstructor Global
 
 getLocation :: DefParser Location
 getLocation = do
@@ -202,9 +206,9 @@ infixOperator :: DefParser Definition
 infixOperator = inBraces operator
 
 operator :: DefParser Definition
-operator =
-  pure (DefinitionC Function) <*> getLocation <*>
-  many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
+operator = pure fn <*> getLocation <*> many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
+  where
+    fn = DefinitionC Function Global
 
 -- I'm not interested in parsing arguments at this moment, except to know when the argument list is over.
 arguments :: DefParser ()

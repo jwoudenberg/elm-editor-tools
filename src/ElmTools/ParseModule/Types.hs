@@ -11,6 +11,7 @@ data Declaration
 
 data Definition = DefinitionC
   { definitionType :: DefinitionType
+  , scope :: Scope
   , location :: Location
   , name :: String
   } deriving (Show, Eq)
@@ -21,6 +22,11 @@ data DefinitionType
   | TypeAlias
   deriving (Show, Eq)
 
+data Scope
+  = Exported
+  | Global
+  deriving (Show, Eq)
+
 data Location = Location
   { fileName :: String
   , line :: Int
@@ -28,7 +34,7 @@ data Location = Location
   } deriving (Show, Eq)
 
 instance ToJSON Definition where
-  toJSON (DefinitionC _ location' name') =
+  toJSON (DefinitionC _ _ location' name') =
     object
       [ "name" .= name'
       , "fileName" .= fileName location'

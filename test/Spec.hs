@@ -174,16 +174,21 @@ importTests =
 
 fn :: String -> Int -> Int -> Declaration
 fn name' line_ column_ =
-  Definition $ DefinitionC Function (Location fileName_ line_ column_) name'
+  Definition $ DefinitionC Function Global location' name'
+  where
+    location' = Location fileName_ line_ column_
 
 typeConstructor :: String -> Int -> Int -> Declaration
 typeConstructor name' line_ column_ =
-  Definition $
-  DefinitionC TypeConstructor (Location fileName_ line_ column_) name'
+  Definition $ DefinitionC TypeConstructor Global location' name'
+  where
+    location' = Location fileName_ line_ column_
 
 typeAlias :: String -> Int -> Int -> Declaration
 typeAlias name' line_ column_ =
-  Definition $ DefinitionC TypeAlias (Location fileName_ line_ column_) name'
+  Definition $ DefinitionC TypeAlias Global location' name'
+  where
+    location' = Location fileName_ line_ column_
 
 imprt :: String -> String -> ExposedNames -> Declaration
 imprt qualiedName localName_ exposing_ =
