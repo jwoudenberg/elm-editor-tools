@@ -1,4 +1,4 @@
-module Error
+module ElmTools.Error
   ( Error(..)
   ) where
 

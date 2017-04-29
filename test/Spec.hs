@@ -1,4 +1,4 @@
-import ParseElmModule
+import ElmTools.ParseModule
 import Test.Tasty
 import Test.Tasty.HUnit
 

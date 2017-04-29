@@ -15,12 +15,12 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
-                     , ParseElmModule
-                     , ParseElmModule.Types
-                     , ResolveModule
-                     , Error
-                     , ParseElmConfig
+  exposed-modules:     ElmTools
+                     , ElmTools.ParseModule
+                     , ElmTools.ParseModule.Types
+                     , ElmTools.ResolveModule
+                     , ElmTools.Error
+                     , ElmTools.ParseConfig
   build-depends:       base >= 4.7 && < 5
                      , parsec >= 3.1 && < 4
                      , indents >= 0.4.0.0 && < 0.5

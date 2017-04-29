@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ParseElmConfig
+module ElmTools.ParseConfig
   ( ElmJSON(..)
   , DepsJSON
   , Version
@@ -12,7 +12,7 @@ import Control.Applicative (empty)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as ByteString
 import qualified Data.Map.Strict as Map
-import Error
+import ElmTools.Error
 import Path
 
 data ElmJSON = ElmJSON

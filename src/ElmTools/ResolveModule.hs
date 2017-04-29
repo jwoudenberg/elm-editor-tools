@@ -10,7 +10,7 @@
 -- where
 -- The parsing and searching of dependencies elm-package.json is lazy.
 -- Native modules are supported.
-module ResolveModule
+module ElmTools.ResolveModule
   ( resolveModule
   ) where
 
@@ -19,8 +19,8 @@ import Control.Monad.Except
 import Data.List
 import Data.List.Split (splitOn)
 import Data.Map.Strict as Map
-import Error
-import ParseElmConfig
+import ElmTools.Error
+import ElmTools.ParseConfig
        (ElmJSON(sourceDirectories), DepsJSON, readElmJSON, readDepsJSON)
 import Path
 import Path.IO

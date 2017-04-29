@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module ParseElmModule.Types where
+module ElmTools.ParseModule.Types where
 
 import Data.Aeson
 

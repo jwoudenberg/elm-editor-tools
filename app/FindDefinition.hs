@@ -2,7 +2,7 @@ module Main where
 
 import qualified Data.Aeson
 import qualified Data.ByteString.Lazy.Char8
-import Lib
+import qualified ElmTools
 import qualified System.Environment
 import qualified System.Exit
 
@@ -16,7 +16,7 @@ main = do
 
 find :: FilePath -> String -> IO ()
 find filePath name = do
-  result <- findDefinition filePath name
+  result <- ElmTools.findDefinition filePath name
   case result of
     Left err -> System.Exit.die $ show err
     Right definitions ->

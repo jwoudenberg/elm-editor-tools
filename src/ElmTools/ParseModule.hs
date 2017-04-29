@@ -1,4 +1,4 @@
-module ParseElmModule
+module ElmTools.ParseModule
   ( elmParser
   , parseString
   , findDefinition
@@ -12,8 +12,8 @@ module ParseElmModule
 import Control.Monad (join)
 import Data.List
 import Data.Maybe (mapMaybe, fromMaybe)
-import Error
-import ParseElmModule.Types
+import ElmTools.Error
+import ElmTools.ParseModule.Types
 import Text.Parsec
 import Text.Parsec.Indent
 

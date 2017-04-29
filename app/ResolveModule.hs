@@ -1,6 +1,6 @@
 module Main where
 
-import qualified Lib
+import qualified ElmTools
 import qualified System.Environment
 import qualified System.Exit
 
@@ -19,7 +19,7 @@ getArgs = do
 
 resolveModule :: FilePath -> String -> IO ()
 resolveModule fromFile moduleName = do
-  resolvedPath' <- Lib.resolveModule fromFile moduleName
+  resolvedPath' <- ElmTools.resolveModule fromFile moduleName
   case resolvedPath' of
     Left err -> System.Exit.die (show err)
     Right resolvedPath -> putStrLn resolvedPath
