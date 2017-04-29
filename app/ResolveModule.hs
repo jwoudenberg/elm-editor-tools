@@ -2,9 +2,9 @@
 
 module Main where
 
-import Lib (modulePath)
+import qualified Lib
 import qualified System.Environment
-import System.Exit (die)
+import qualified System.Exit
 
 main :: IO ()
 main = do
@@ -17,13 +17,13 @@ getArgs = do
   case args of
     [fromFile, moduleName] -> pure (fromFile, moduleName)
     _ -> do
-      die usage
+      System.Exit.die usage
 
 resolveModule :: FilePath -> String -> IO ()
 resolveModule fromFile moduleName = do
-  resolvedPath' <- modulePath fromFile moduleName
+  resolvedPath' <- Lib.resolveModule fromFile moduleName
   case resolvedPath' of
-    Left err -> die (show err)
+    Left err -> System.Exit.die (show err)
     Right resolvedPath -> putStrLn resolvedPath
 
 usage :: String

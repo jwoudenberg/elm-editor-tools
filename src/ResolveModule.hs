@@ -11,8 +11,8 @@
 -- where
 -- The parsing and searching of dependencies elm-package.json is lazy.
 -- Native modules are supported.
-module Imports
-  ( modulePath
+module ResolveModule
+  ( resolveModule
   ) where
 
 import Control.Applicative (liftA2)
@@ -41,8 +41,8 @@ instance Monoid Candidate where
         Just path -> pure (Just path)
         Nothing -> next
 
-modulePath :: FilePath -> String -> IO (Either Error FilePath)
-modulePath importedFromFile moduleName =
+resolveModule :: FilePath -> String -> IO (Either Error FilePath)
+resolveModule importedFromFile moduleName =
   runExceptT $ do
     let relModulePath = moduleAsPath moduleName
     localRoot <- getDirPath importedFromFile >>= findLocalRoot

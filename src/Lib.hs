@@ -3,10 +3,10 @@
 
 module Lib
     ( module Definitions
-    , module Imports
+    , ResolveModule.resolveModule
     , module Error
     ) where
 
 import Definitions
 import Error
-import Imports
+import ResolveModule
