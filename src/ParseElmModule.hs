@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Definitions
+module ParseElmModule
   ( elmParser
   , parseString
   , findDefinition

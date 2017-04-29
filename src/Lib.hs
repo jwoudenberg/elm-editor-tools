@@ -2,11 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Lib
-    ( module Definitions
+    ( ParseElmModule.findDefinition
     , ResolveModule.resolveModule
-    , module Error
+    , Error.Error(..)
     ) where
 
-import Definitions
 import Error
+import ParseElmModule
 import ResolveModule

@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
 
-import Lib
+import ParseElmModule
 import Test.Tasty
 import Test.Tasty.HUnit
 
