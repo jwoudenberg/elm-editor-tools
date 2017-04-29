@@ -190,7 +190,7 @@ typeAlias :: String -> Int -> Int -> Declaration
 typeAlias name line_ column_ =
   Definition $ TypeAlias name (Location fileName_ line_ column_)
 
-imprt :: String -> String -> Exposing -> Declaration
+imprt :: String -> String -> ExposedNames -> Declaration
 imprt qualiedName localName_ exposing_ =
   Import $ ImportC qualiedName localName_ exposing_
 

@@ -182,7 +182,7 @@ capitalizedWord = do
 moduleName :: DefParser String
 moduleName = mconcat <$> intersperse "." <$> sepBy capitalizedWord (string ".")
 
-exposedList :: DefParser Exposing
+exposedList :: DefParser ExposedNames
 exposedList =
   choice
     [ try $ exposeAll *> pure All

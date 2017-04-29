@@ -27,10 +27,10 @@ data Definition
 data Import = ImportC
   { qualifiedName :: String
   , localName :: String
-  , exposing :: Exposing
+  , exposedNames :: ExposedNames
   } deriving (Show, Eq)
 
-data Exposing
+data ExposedNames
   = All
   | Selected [String]
   deriving (Show, Eq)
