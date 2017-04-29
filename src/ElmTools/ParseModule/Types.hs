@@ -4,25 +4,37 @@ module ElmTools.ParseModule.Types where
 
 import Data.Aeson
 
+data Declaration
+  = Definition Definition
+  | Import Import
+  deriving (Show, Eq)
+
+data Definition = DefinitionC
+  { definitionType :: DefinitionType
+  , location :: Location
+  , name :: String
+  } deriving (Show, Eq)
+
+data DefinitionType
+  = Function
+  | TypeConstructor
+  | TypeAlias
+  deriving (Show, Eq)
+
 data Location = Location
   { fileName :: String
   , line :: Int
   , column :: Int
   } deriving (Show, Eq)
 
-data Declaration
-  = Definition Definition
-  | Import Import
-  deriving (Show, Eq)
-
-data Definition
-  = TopFunction String
-                Location
-  | TypeConstructor String
-                    Location
-  | TypeAlias String
-              Location
-  deriving (Show, Eq)
+instance ToJSON Definition where
+  toJSON (DefinitionC _ location' name') =
+    object
+      [ "name" .= name'
+      , "fileName" .= fileName location'
+      , "line" .= line location'
+      , "column" .= column location'
+      ]
 
 data Import = ImportC
   { qualifiedName :: String
@@ -34,26 +46,3 @@ data ExposedNames
   = All
   | Selected [String]
   deriving (Show, Eq)
-
-instance ToJSON Definition where
-  toJSON (TopFunction name location) =
-    object
-      [ "name" .= name
-      , "fileName" .= fileName location
-      , "line" .= line location
-      , "column" .= column location
-      ]
-  toJSON (TypeConstructor name location) =
-    object
-      [ "name" .= name
-      , "fileName" .= fileName location
-      , "line" .= line location
-      , "column" .= column location
-      ]
-  toJSON (TypeAlias name location) =
-    object
-      [ "name" .= name
-      , "fileName" .= fileName location
-      , "line" .= line location
-      , "column" .= column location
-      ]

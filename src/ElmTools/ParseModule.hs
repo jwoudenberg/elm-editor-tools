@@ -15,12 +15,12 @@ import Text.Parsec.Indent
 type DefParser result = IndentParser String () result
 
 findDefinition :: FilePath -> String -> IO (Either Error Definition)
-findDefinition filePath name = do
+findDefinition filePath name' = do
   parseResult <- elmParser filePath
   return $ do
     decs <- mapLeft (CouldNotParseElmModule filePath . show) parseResult
     let defs = mapMaybe getDef decs
-    findDef name defs
+    findDef name' defs
 
 getDef :: Declaration -> Maybe Definition
 getDef declaration =
@@ -35,17 +35,10 @@ mapLeft fn either_ =
     Right y -> Right y
 
 findDef :: String -> [Definition] -> Either Error Definition
-findDef name defs =
-  case find ((==) name . defName) defs of
-    Nothing -> Left (CouldNotFindDefinition name)
+findDef name' defs =
+  case find ((==) name' . name) defs of
+    Nothing -> Left (CouldNotFindDefinition name')
     Just def -> Right def
-
-defName :: Definition -> String
-defName def =
-  case def of
-    TopFunction name _ -> name
-    TypeConstructor name _ -> name
-    TypeAlias name _ -> name
 
 elmParser :: FilePath -> IO (Either ParseError [Declaration])
 elmParser filePath = do
@@ -110,7 +103,7 @@ topFunction :: DefParser Definition
 topFunction = infixOperator <|> variable <* whitespace <* arguments <* char '='
 
 variable :: DefParser Definition
-variable = (pure $ flip TopFunction) <*> getLocation <*> lowerCasedWord
+variable = (pure $ DefinitionC Function) <*> getLocation <*> lowerCasedWord
 
 sumType :: DefParser [Definition]
 sumType = do
@@ -132,16 +125,16 @@ importStatement =
     exposingClause =
       optionMaybe $
       try $ whitespace1 *> string "exposing" *> whitespace1 *> exposedList
-    importDef name maybeAlias maybeExposed =
+    importDef name' maybeAlias maybeExposed =
       ImportC
-        name
-        (fromMaybe name maybeAlias)
+        name'
+        (fromMaybe name' maybeAlias)
         (fromMaybe (Selected []) maybeExposed)
 
 typeAlias :: DefParser Definition
 typeAlias = do
   _ <- typeAliasKeyword
-  return (flip TypeAlias) <*> getLocation <*> capitalizedWord
+  return (DefinitionC TypeAlias) <*> getLocation <*> capitalizedWord
   where
     typeAliasKeyword =
       string "type" >> whitespace1 >> string "alias" >> whitespace1
@@ -155,7 +148,8 @@ typeDefinition = do
 
 typeConstructor :: DefParser Definition
 typeConstructor =
-  pure (flip TypeConstructor) <*> getLocation <*> capitalizedWord <* arguments
+  pure (DefinitionC TypeConstructor) <*> getLocation <*> capitalizedWord <*
+  arguments
 
 getLocation :: DefParser Location
 getLocation = do
@@ -209,7 +203,7 @@ infixOperator = inBraces operator
 
 operator :: DefParser Definition
 operator =
-  pure (flip TopFunction) <*> getLocation <*>
+  pure (DefinitionC Function) <*> getLocation <*>
   many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
 
 -- I'm not interested in parsing arguments at this moment, except to know when the argument list is over.

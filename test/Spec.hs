@@ -22,35 +22,29 @@ topLevelFunctionTests :: TestTree
 topLevelFunctionTests =
   testGroup
     "top level functions"
-    [ t "top level function" "foo = 42" [topFunction "foo" 1 1]
-    , t
-        "with arguments"
-        "foo (One thing) { field } int = 42"
-        [topFunction "foo" 1 1]
-    , t "no whitespace" "foo=42" [topFunction "foo" 1 1]
-    , t "much whitespace" "foo   =\t42" [topFunction "foo" 1 1]
-    , t "broken across lines" "foo =\n 42" [topFunction "foo" 1 1]
-    , t
-        "non-first line"
-        "a line\nanother line\nfoo = 42"
-        [topFunction "foo" 3 1]
+    [ t "top level function" "foo = 42" [fn "foo" 1 1]
+    , t "with arguments" "foo (One thing) { field } int = 42" [fn "foo" 1 1]
+    , t "no whitespace" "foo=42" [fn "foo" 1 1]
+    , t "much whitespace" "foo   =\t42" [fn "foo" 1 1]
+    , t "broken across lines" "foo =\n 42" [fn "foo" 1 1]
+    , t "non-first line" "a line\nanother line\nfoo = 42" [fn "foo" 3 1]
     , t
         "tailing content"
         "foo = 42 and some more stuff\nanother line"
-        [topFunction "foo" 1 1]
-    , t "infix operator" "(<>) = something" [topFunction "<>" 1 2]
+        [fn "foo" 1 1]
+    , t "infix operator" "(<>) = something" [fn "<>" 1 2]
     , t
         "destructured record"
         "{ foo, bar } = something"
-        [topFunction "foo" 1 3, topFunction "bar" 1 8]
+        [fn "foo" 1 3, fn "bar" 1 8]
     , t
         "destructured tuple"
         "( foo, bar ) = something"
-        [topFunction "foo" 1 3, topFunction "bar" 1 8]
+        [fn "foo" 1 3, fn "bar" 1 8]
     , t
         "nested destructured tuple"
         "( ( foo, bar ), { baz }) = something"
-        [topFunction "foo" 1 5, topFunction "bar" 1 10, topFunction "baz" 1 19]
+        [fn "foo" 1 5, fn "bar" 1 10, fn "baz" 1 19]
     ]
 
 sumTypeTests :: TestTree
@@ -110,19 +104,19 @@ combinationTests =
     [ t
         "sum type followed by top level function"
         "type Foo = Bar\nfoo = 42"
-        [typeConstructor "Bar" 1 12, topFunction "foo" 2 1]
+        [typeConstructor "Bar" 1 12, fn "foo" 2 1]
     , t
         "top level function followed by sum type"
         "foo = 42\ntype Foo = Bar"
-        [topFunction "foo" 1 1, typeConstructor "Bar" 2 12]
+        [fn "foo" 1 1, typeConstructor "Bar" 2 12]
     , t
         "top level function followed by type alias"
         "foo = 42\ntype alias Foo = Bar"
-        [topFunction "foo" 1 1, typeAlias "Foo" 2 12]
+        [fn "foo" 1 1, typeAlias "Foo" 2 12]
     , t
         "type alias followed by top level function"
         "type alias Foo = Bar\nfoo = 42"
-        [typeAlias "Foo" 1 12, topFunction "foo" 2 1]
+        [typeAlias "Foo" 1 12, fn "foo" 2 1]
     , t
         "type alias followed by sum type"
         "type alias Foo = Bar\ntype Bar = Baz"
@@ -141,7 +135,7 @@ commentTests =
     , t
         "definition after comment"
         "{-some stuff in here-}\nfoo = 42"
-        [topFunction "foo" 2 1]
+        [fn "foo" 2 1]
     , t "comment until end of file" "{-\nfoo = 42" []
     , t "nested comment blocks" "{-{--}\nfoo = 42-}" []
     ]
@@ -178,17 +172,18 @@ importTests =
         [imprt "Foo.Bar" "Foo.Bar" (Selected ["One", "two"])]
     ]
 
-topFunction :: String -> Int -> Int -> Declaration
-topFunction name line_ column_ =
-  Definition $ TopFunction name (Location fileName_ line_ column_)
+fn :: String -> Int -> Int -> Declaration
+fn name' line_ column_ =
+  Definition $ DefinitionC Function (Location fileName_ line_ column_) name'
 
 typeConstructor :: String -> Int -> Int -> Declaration
-typeConstructor name line_ column_ =
-  Definition $ TypeConstructor name (Location fileName_ line_ column_)
+typeConstructor name' line_ column_ =
+  Definition $
+  DefinitionC TypeConstructor (Location fileName_ line_ column_) name'
 
 typeAlias :: String -> Int -> Int -> Declaration
-typeAlias name line_ column_ =
-  Definition $ TypeAlias name (Location fileName_ line_ column_)
+typeAlias name' line_ column_ =
+  Definition $ DefinitionC TypeAlias (Location fileName_ line_ column_) name'
 
 imprt :: String -> String -> ExposedNames -> Declaration
 imprt qualiedName localName_ exposing_ =
