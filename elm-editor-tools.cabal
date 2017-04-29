@@ -30,7 +30,7 @@ library
   other-modules:       Definitions
                      , ResolveModule
                      , Error
-                     , ElmConfig
+                     , ParseElmConfig
 
 executable elm-find-definition
   hs-source-dirs:      app

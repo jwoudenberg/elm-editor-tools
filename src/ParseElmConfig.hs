@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module ElmConfig
+module ParseElmConfig
   ( ElmJSON(..)
   , DepsJSON
   , Version

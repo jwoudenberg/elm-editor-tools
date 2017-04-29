@@ -20,9 +20,9 @@ import Control.Monad.Except
 import Data.List
 import Data.List.Split (splitOn)
 import Data.Map.Strict as Map
-import ElmConfig
-       (ElmJSON(sourceDirectories), DepsJSON, readElmJSON, readDepsJSON)
 import Error
+import ParseElmConfig
+       (ElmJSON(sourceDirectories), DepsJSON, readElmJSON, readDepsJSON)
 import Path
 import Path.IO
 
