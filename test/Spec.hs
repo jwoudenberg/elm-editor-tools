@@ -160,7 +160,7 @@ importTests =
     , t
         "exposing some sum type constructors"
         "import Foo.Bar exposing (One(Two))"
-        [imprt "Foo.Bar" "Foo.Bar" (selected ["Two"])]
+        [imprt "Foo.Bar" "Foo.Bar" (selected ["One.Two"])]
     , t
         "exposing all sum type constructors"
         "import Foo.Bar exposing (One(..))"
@@ -168,7 +168,7 @@ importTests =
     , t
         "much whitespace"
         "import    Foo.Bar  \tas    Bar    exposing   ( One  ,  Two ( Three ) )"
-        [imprt "Foo.Bar" "Bar" (selected ["One", "Three"])]
+        [imprt "Foo.Bar" "Bar" (selected ["One", "Two.Three"])]
     , t
         "broken across lines"
         "import Foo.Bar exposing\n (\n One, two)"

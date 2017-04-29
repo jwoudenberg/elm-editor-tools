@@ -109,9 +109,9 @@ definition :: DefinitionType -> Location -> String -> DefParser Definition
 definition definitionType' location' name' = do
   exportedNames' <- exportedNames <$> getState
   let scope' =
-        case exportedNames' of
-          All -> Exported
-          Selected exported ->
+        case (exportedNames', definitionType') of
+          (All, _) -> Exported
+          (Selected exported, _) ->
             if Set.member name' exported
               then Exported
               else Global
@@ -219,13 +219,17 @@ exposedList =
 
 exposedSumType :: DefParser [String]
 exposedSumType =
-  choice
-    [ try $ capitalizedWord *> whitespace *> exposedConstructors
-    , try $ pure <$> (pure (++) <*> capitalizedWord <* whitespace <*> exposeAll)
+  choice $
+  fmap
+    try
+    [ (fmap . joinWithDot) <$> (capitalizedWord <* whitespace) <*>
+      exposedConstructors
+    , pure <$> (pure (++) <*> capitalizedWord <* whitespace <*> exposeAll)
     , pure <$> capitalizedWord
     ]
   where
     exposedConstructors = inBraces (sepBy capitalizedWord (try comma))
+    joinWithDot a b = a ++ "." ++ b
 
 exposeAll :: DefParser String
 exposeAll = inBraces (string "..") *> pure "(..)"
