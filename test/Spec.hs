@@ -1,4 +1,5 @@
 import ElmTools.ParseModule
+import ElmTools.ParseModule.Types
 import Test.Tasty
 import Test.Tasty.HUnit
 

@@ -2,11 +2,6 @@ module ElmTools.ParseModule
   ( elmParser
   , parseString
   , findDefinition
-  , Location(..)
-  , Definition(..)
-  , Declaration(..)
-  , Import(..)
-  , Exposing(..)
   ) where
 
 import Control.Monad (join)
