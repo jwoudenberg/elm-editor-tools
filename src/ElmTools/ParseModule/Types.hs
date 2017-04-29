@@ -19,7 +19,7 @@ data Definition = DefinitionC
 
 data DefinitionType
   = Function
-  | TypeConstructor
+  | TypeConstructor String
   | TypeAlias
   deriving (Show, Eq)
 

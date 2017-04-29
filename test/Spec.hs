@@ -54,26 +54,29 @@ sumTypeTests :: TestTree
 sumTypeTests =
   testGroup
     "sum types"
-    [ t "sum type" "type Foo = Bar" [typeConstructor "Bar" 1 12]
+    [ t "sum type" "type Foo = Bar" [typeConstructor "Foo" "Bar" 1 12]
     , t
         "with multiple type constructors"
         "type Foo = Bar | Baz"
-        [typeConstructor "Bar" 1 12, typeConstructor "Baz" 1 18]
-    , t "minimal whitespace" "type Foo=Bar" [typeConstructor "Bar" 1 10]
-    , t "much whitespace" "type  Foo  =  Bar" [typeConstructor "Bar" 1 15]
-    , t "broken across lines" "type Foo =\n Bar" [typeConstructor "Bar" 2 2]
+        [typeConstructor "Foo" "Bar" 1 12, typeConstructor "Foo" "Baz" 1 18]
+    , t "minimal whitespace" "type Foo=Bar" [typeConstructor "Foo" "Bar" 1 10]
+    , t "much whitespace" "type  Foo  =  Bar" [typeConstructor "Foo" "Bar" 1 15]
+    , t
+        "broken across lines"
+        "type Foo =\n Bar"
+        [typeConstructor "Foo" "Bar" 2 2]
     , t
         "non-first line"
         "a line\nanother line\ntype Foo = Bar"
-        [typeConstructor "Bar" 3 12]
+        [typeConstructor "Foo" "Bar" 3 12]
     , t
         "tailing content"
         "type Foo = Bar and some more stuff\nanother line"
-        [typeConstructor "Bar" 1 12]
+        [typeConstructor "Foo" "Bar" 1 12]
     , t
         "with type parameters"
         "type Foo = Bar a | Baz one (Maybe Int)"
-        [typeConstructor "Bar" 1 12, typeConstructor "Baz" 1 20]
+        [typeConstructor "Foo" "Bar" 1 12, typeConstructor "Foo" "Baz" 1 20]
     ]
 
 typeAliasTests :: TestTree
@@ -107,11 +110,11 @@ combinationTests =
     [ t
         "sum type followed by top level function"
         "type Foo = Bar\nfoo = 42"
-        [typeConstructor "Bar" 1 12, fn "foo" 2 1]
+        [typeConstructor "Foo" "Bar" 1 12, fn "foo" 2 1]
     , t
         "top level function followed by sum type"
         "foo = 42\ntype Foo = Bar"
-        [fn "foo" 1 1, typeConstructor "Bar" 2 12]
+        [fn "foo" 1 1, typeConstructor "Foo" "Bar" 2 12]
     , t
         "top level function followed by type alias"
         "foo = 42\ntype alias Foo = Bar"
@@ -123,11 +126,11 @@ combinationTests =
     , t
         "type alias followed by sum type"
         "type alias Foo = Bar\ntype Bar = Baz"
-        [typeAlias "Foo" 1 12, typeConstructor "Baz" 2 12]
+        [typeAlias "Foo" 1 12, typeConstructor "Bar" "Baz" 2 12]
     , t
         "sum type folloed by type alias"
         "type Bar = Baz\ntype alias Foo = Bar"
-        [typeConstructor "Baz" 1 12, typeAlias "Foo" 2 12]
+        [typeConstructor "Bar" "Baz" 1 12, typeAlias "Foo" 2 12]
     ]
 
 commentTests :: TestTree
@@ -181,8 +184,8 @@ exportTests =
     "exported names"
     [ testExport
         "exporting everything"
-        "module Foo exposing (..)\nfoo = 42"
-        ["foo"]
+        "module Foo exposing (..)\nfoo = 42\ntype Bla = Baz"
+        ["foo", "Baz"]
     , testExport "exporting nothing" "module Foo exposing ()\nfoo = 42" []
     , testExport
         "exporting selected names"
@@ -196,9 +199,9 @@ fn name' line_ column_ =
   where
     location' = Location fileName_ line_ column_
 
-typeConstructor :: String -> Int -> Int -> Declaration
-typeConstructor name' line_ column_ =
-  Definition $ DefinitionC TypeConstructor Global location' name'
+typeConstructor :: String -> String -> Int -> Int -> Declaration
+typeConstructor typeName name' line_ column_ =
+  Definition $ DefinitionC (TypeConstructor typeName) Global location' name'
   where
     location' = Location fileName_ line_ column_
 

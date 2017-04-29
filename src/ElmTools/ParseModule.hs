@@ -6,6 +6,7 @@ module ElmTools.ParseModule
 
 import Control.Monad (join)
 import Data.List
+import Data.List.Split (splitOn)
 import Data.Maybe (mapMaybe, fromMaybe)
 import qualified Data.Set as Set
 import ElmTools.Error
@@ -138,12 +139,14 @@ variable = join $ (definition Function) <$> getLocation <*> lowerCasedWord
 
 sumType :: DefParser [Definition]
 sumType = do
-  typeKey *> typeDefinition *> equalSign *> constructors
+  typeKey *> (typeDefinition <* equalSign) >>= constructors
   where
     typeKey = string "type" *> whitespace1
     equalSign = whitespace *> char '=' *> whitespace
-    constructors =
-      sepBy typeConstructor (try $ whitespace >> char '|' >> whitespace)
+    constructors typeName =
+      sepBy
+        (typeConstructor typeName)
+        (try $ whitespace >> char '|' >> whitespace)
 
 importStatement :: DefParser Import
 importStatement =
@@ -177,10 +180,12 @@ typeDefinition = do
     optionMaybe $ try $ whitespace1 >> sepBy lowerCasedWord whitespace1
   return $ concat $ intersperse " " $ baseType : (maybe [] id typeParams)
 
-typeConstructor :: DefParser Definition
-typeConstructor =
-  join $
-  (definition TypeConstructor) <$> getLocation <*> capitalizedWord <* arguments
+typeConstructor :: String -> DefParser Definition
+typeConstructor typeName =
+  join $ typeConstructor' <$> getLocation <*> capitalizedWord <* arguments
+  where
+    nameWithoutParams = head $ splitOn " " typeName
+    typeConstructor' = (definition $ TypeConstructor nameWithoutParams)
 
 getLocation :: DefParser Location
 getLocation = do
