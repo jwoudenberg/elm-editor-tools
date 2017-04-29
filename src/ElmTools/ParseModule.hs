@@ -111,7 +111,10 @@ definition definitionType' location' name' = do
   let scope' =
         case exportedNames' of
           All -> Exported
-          Selected _ -> Global
+          Selected exported ->
+            if Set.member name' exported
+              then Exported
+              else Global
   return $ DefinitionC definitionType' scope' location' name'
 
 destructuredAssignment :: DefParser [Definition]

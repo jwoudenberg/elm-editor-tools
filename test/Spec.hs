@@ -184,6 +184,10 @@ exportTests =
         "module Foo exposing (..)\nfoo = 42"
         ["foo"]
     , testExport "exporting nothing" "module Foo exposing ()\nfoo = 42" []
+    , testExport
+        "exporting selected names"
+        "module Foo exposing (bar)\nfoo = 42\nbar= 42"
+        ["bar"]
     ]
 
 fn :: String -> Int -> Int -> Declaration
