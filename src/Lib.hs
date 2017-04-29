@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wall #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module Lib
     ( ParseElmModule.findDefinition
     , ResolveModule.resolveModule

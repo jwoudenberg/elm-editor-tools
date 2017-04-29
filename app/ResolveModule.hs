@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wall #-}
-
 module Main where
 
 import qualified Lib

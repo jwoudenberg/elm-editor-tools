@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wall #-}
-
 import ParseElmModule
 import Test.Tasty
 import Test.Tasty.HUnit
