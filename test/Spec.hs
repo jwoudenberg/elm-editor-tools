@@ -191,6 +191,14 @@ exportTests =
         "exporting selected names"
         "module Foo exposing (bar)\nfoo = 42\nbar= 42"
         ["bar"]
+    , testExport
+        "exporting selected type constructors"
+        "module Foo exposing (Foo(Bar))\ntype Foo = Bar | Baz"
+        ["Bar"]
+    , testExport
+        "exporting all type constructors"
+        "module Foo exposing (Foo(..))\ntype Foo = Bar | Baz"
+        ["Bar", "Baz"]
     ]
 
 fn :: String -> Int -> Int -> Declaration

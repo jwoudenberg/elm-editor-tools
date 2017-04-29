@@ -70,6 +70,7 @@ line_ = do
     -- I'd prefer not to have to `try` each definition parser here, but I don't see I have any choice.
     -- When a syntax error is encountered, I don't want to abort parsing, but continue on to the next definition.
     -- As far as I know, parsec offers no way to recover from parsers that failed after consuming input.
+    -- TODO: make try more specific: if you start out reading 'type', you know it's never a function definition.
   where
     declaration = choice (fmap try declarationParsers)
 
@@ -112,6 +113,11 @@ definition definitionType' location' name' = do
   let scope' =
         case (exportedNames', definitionType') of
           (All, _) -> Exported
+          (Selected exported, TypeConstructor typeName) ->
+            if (Set.member (typeName ++ "(..)") exported) ||
+               (Set.member (typeName ++ "." ++ name') exported)
+              then Exported
+              else Global
           (Selected exported, _) ->
             if Set.member name' exported
               then Exported
@@ -137,6 +143,7 @@ topFunction = infixOperator <|> variable <* whitespace <* arguments <* char '='
 variable :: DefParser Definition
 variable = join $ (definition Function) <$> getLocation <*> lowerCasedWord
 
+-- TODO: support type parameters in sum types
 sumType :: DefParser [Definition]
 sumType = do
   typeKey *> (typeDefinition <* equalSign) >>= constructors
