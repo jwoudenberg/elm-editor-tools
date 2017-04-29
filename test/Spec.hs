@@ -147,12 +147,12 @@ importTests :: TestTree
 importTests =
   testGroup
     "imports functions"
-    [ t "simple" "import Foo.Bar" [imprt "Foo.Bar" "Foo.Bar" (Selected [])]
-    , t "aliased" "import Foo.Bar as Bar" [imprt "Foo.Bar" "Bar" (Selected [])]
+    [ t "simple" "import Foo.Bar" [imprt "Foo.Bar" "Foo.Bar" (selected [])]
+    , t "aliased" "import Foo.Bar as Bar" [imprt "Foo.Bar" "Bar" (selected [])]
     , t
         "exposing"
         "import Foo.Bar exposing (One, two)"
-        [imprt "Foo.Bar" "Foo.Bar" (Selected ["One", "two"])]
+        [imprt "Foo.Bar" "Foo.Bar" (selected ["One", "two"])]
     , t
         "exposing everything"
         "import Foo.Bar exposing (..)"
@@ -160,19 +160,19 @@ importTests =
     , t
         "exposing some sum type constructors"
         "import Foo.Bar exposing (One(Two))"
-        [imprt "Foo.Bar" "Foo.Bar" (Selected ["Two"])]
+        [imprt "Foo.Bar" "Foo.Bar" (selected ["Two"])]
     , t
         "exposing all sum type constructors"
         "import Foo.Bar exposing (One(..))"
-        [imprt "Foo.Bar" "Foo.Bar" (Selected ["One(..)"])]
+        [imprt "Foo.Bar" "Foo.Bar" (selected ["One(..)"])]
     , t
         "much whitespace"
         "import    Foo.Bar  \tas    Bar    exposing   ( One  ,  Two ( Three ) )"
-        [imprt "Foo.Bar" "Bar" (Selected ["One", "Three"])]
+        [imprt "Foo.Bar" "Bar" (selected ["One", "Three"])]
     , t
         "broken across lines"
         "import Foo.Bar exposing\n (\n One, two)"
-        [imprt "Foo.Bar" "Foo.Bar" (Selected ["One", "two"])]
+        [imprt "Foo.Bar" "Foo.Bar" (selected ["One", "two"])]
     ]
 
 exportTests :: TestTree
@@ -234,3 +234,6 @@ exportedDef declaration =
 
 exportedNames :: [Declaration] -> Set.Set String
 exportedNames = Set.fromList . fmap name . mapMaybe exportedDef
+
+selected :: [String] -> ExposedNames
+selected = Selected . Set.fromList

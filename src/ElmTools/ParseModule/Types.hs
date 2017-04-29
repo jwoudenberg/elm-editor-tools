@@ -3,6 +3,7 @@
 module ElmTools.ParseModule.Types where
 
 import Data.Aeson
+import Data.Set (Set)
 
 data Declaration
   = Definition Definition
@@ -50,5 +51,5 @@ data Import = ImportC
 
 data ExposedNames
   = All
-  | Selected [String]
+  | Selected (Set String)
   deriving (Show, Eq)

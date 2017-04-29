@@ -7,6 +7,7 @@ module ElmTools.ParseModule
 import Control.Monad (join)
 import Data.List
 import Data.Maybe (mapMaybe, fromMaybe)
+import qualified Data.Set as Set
 import ElmTools.Error
 import ElmTools.ParseModule.Types
 import Text.Parsec
@@ -54,7 +55,7 @@ parseString filePath fileContent =
   runIndentParser declarations startState filePath fileContent
     -- We assume nothing is exported until told otherwise.
   where
-    startState = ParseState (Selected [])
+    startState = ParseState (Selected Set.empty)
 
 declarations :: DefParser [Declaration]
 declarations = do
@@ -156,7 +157,7 @@ importStatement =
       ImportC
         name'
         (fromMaybe name' maybeAlias)
-        (fromMaybe (Selected []) maybeExposed)
+        (fromMaybe (Selected Set.empty) maybeExposed)
 
 typeAlias :: DefParser Definition
 typeAlias = do
@@ -207,7 +208,8 @@ exposedList :: DefParser ExposedNames
 exposedList =
   choice
     [ try $ exposeAll *> pure All
-    , Selected . mconcat <$> (inBraces $ sepBy exposedValue (try comma))
+    , Selected . Set.fromList . mconcat <$>
+      (inBraces $ sepBy exposedValue (try comma))
     ]
   where
     exposedValue = exposedSumType <|> pure <$> lowerCasedWord
