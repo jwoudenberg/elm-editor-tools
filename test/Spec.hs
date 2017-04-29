@@ -1,3 +1,5 @@
+import Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
 import ElmTools.ParseModule
 import ElmTools.ParseModule.Types
 import Test.Tasty
@@ -16,6 +18,7 @@ tests =
     , combinationTests
     , commentTests
     , importTests
+    , exportTests
     ]
 
 topLevelFunctionTests :: TestTree
@@ -172,6 +175,17 @@ importTests =
         [imprt "Foo.Bar" "Foo.Bar" (Selected ["One", "two"])]
     ]
 
+exportTests :: TestTree
+exportTests =
+  testGroup
+    "exported names"
+    [ testExport
+        "exporting everything"
+        "module Foo exposing (..)\nfoo = 42"
+        ["foo"]
+    , testExport "exporting nothing" "module Foo exposing ()\nfoo = 42" []
+    ]
+
 fn :: String -> Int -> Int -> Declaration
 fn name' line_ column_ =
   Definition $ DefinitionC Function Global location' name'
@@ -201,3 +215,22 @@ t :: String -> String -> [Declaration] -> TestTree
 t description content definitions =
   testCase description $
   assertEqual description (Right definitions) (parseString fileName_ content)
+
+testExport :: String -> String -> [String] -> TestTree
+testExport description content expectedExportedNames =
+  testCase description $ assertEqual description expected actual
+  where
+    expected = Right $ Set.fromList expectedExportedNames
+    actual = fmap exportedNames (parseString fileName_ content)
+
+exportedDef :: Declaration -> Maybe Definition
+exportedDef declaration =
+  case declaration of
+    Definition definition ->
+      case scope definition of
+        Global -> Nothing
+        Exported -> Just definition
+    Import _ -> Nothing
+
+exportedNames :: [Declaration] -> Set.Set String
+exportedNames = Set.fromList . fmap name . mapMaybe exportedDef

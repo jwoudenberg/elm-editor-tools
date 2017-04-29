@@ -12,7 +12,11 @@ import ElmTools.ParseModule.Types
 import Text.Parsec
 import Text.Parsec.Indent
 
-type DefParser result = IndentParser String () result
+type DefParser result = IndentParser String ParseState result
+
+data ParseState = ParseState
+  { exportedNames :: ExposedNames
+  }
 
 findDefinition :: FilePath -> String -> IO (Either Error Definition)
 findDefinition filePath name' = do
@@ -47,7 +51,10 @@ elmParser filePath = do
 
 parseString :: FilePath -> String -> Either ParseError [Declaration]
 parseString filePath fileContent =
-  runIndentParser declarations () filePath fileContent
+  runIndentParser declarations startState filePath fileContent
+    -- We assume nothing is exported until told otherwise.
+  where
+    startState = ParseState (Selected [])
 
 declarations :: DefParser [Declaration]
 declarations = do
@@ -66,7 +73,8 @@ line_ = do
 
 declarationParsers :: [DefParser [Declaration]]
 declarationParsers =
-  [ pure <$> Import <$> importStatement
+  [ moduleDefinition *> pure []
+  , pure <$> Import <$> importStatement
   , pure <$> Definition <$> typeAlias
   , fmap Definition <$> sumType
   , fmap Definition <$> destructuredAssignment
@@ -86,6 +94,25 @@ commentContentsAndEnd =
 commentBlockEnd :: DefParser ()
 commentBlockEnd = eof <|> dump (string "-}")
 
+moduleDefinition :: DefParser ()
+moduleDefinition = do
+  exportedNames' <-
+    string "module" *> whitespace1 *> moduleName *> whitespace1 *>
+    string "exposing" *>
+    whitespace1 *>
+    exposedList
+  _ <- modifyState (\s -> s {exportedNames = exportedNames'})
+  return ()
+
+definition :: DefinitionType -> Location -> String -> DefParser Definition
+definition definitionType' location' name' = do
+  exportedNames' <- exportedNames <$> getState
+  let scope' =
+        case exportedNames' of
+          All -> Exported
+          Selected _ -> Global
+  return $ DefinitionC definitionType' scope' location' name'
+
 destructuredAssignment :: DefParser [Definition]
 destructuredAssignment = destructuredContent <* whitespace <* char '='
 
@@ -103,9 +130,7 @@ topFunction :: DefParser Definition
 topFunction = infixOperator <|> variable <* whitespace <* arguments <* char '='
 
 variable :: DefParser Definition
-variable = pure fn <*> getLocation <*> lowerCasedWord
-  where
-    fn = DefinitionC Function Global
+variable = join $ (definition Function) <$> getLocation <*> lowerCasedWord
 
 sumType :: DefParser [Definition]
 sumType = do
@@ -136,9 +161,8 @@ importStatement =
 typeAlias :: DefParser Definition
 typeAlias = do
   _ <- typeAliasKeyword
-  return alias <*> getLocation <*> capitalizedWord
+  join $ (definition TypeAlias) <$> getLocation <*> capitalizedWord
   where
-    alias = DefinitionC TypeAlias Global
     typeAliasKeyword =
       string "type" >> whitespace1 >> string "alias" >> whitespace1
 
@@ -151,9 +175,8 @@ typeDefinition = do
 
 typeConstructor :: DefParser Definition
 typeConstructor =
-  pure typeConstructor' <*> getLocation <*> capitalizedWord <* arguments
-  where
-    typeConstructor' = DefinitionC TypeConstructor Global
+  join $
+  (definition TypeConstructor) <$> getLocation <*> capitalizedWord <* arguments
 
 getLocation :: DefParser Location
 getLocation = do
@@ -206,9 +229,9 @@ infixOperator :: DefParser Definition
 infixOperator = inBraces operator
 
 operator :: DefParser Definition
-operator = pure fn <*> getLocation <*> many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
-  where
-    fn = DefinitionC Function Global
+operator =
+  join $
+  (definition Function) <$> getLocation <*> many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
 
 -- I'm not interested in parsing arguments at this moment, except to know when the argument list is over.
 arguments :: DefParser ()

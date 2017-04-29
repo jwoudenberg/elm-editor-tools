@@ -60,6 +60,7 @@ test-suite elm-editor-tools-test
                      , elm-editor-tools
                      , tasty
                      , tasty-hunit
+                     , containers >= 0.5.7.1 && < 0.6
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 
