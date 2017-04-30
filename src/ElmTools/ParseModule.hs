@@ -138,10 +138,9 @@ topFunction =
 variable :: DefParser Definition
 variable = join $ (definition Function) <$> getLocation <*> lowerCasedWord
 
--- TODO: support type parameters in sum types
 sumType :: DefParser [Definition]
 sumType = do
-  typeKey *> (typeDefinition <* equalSign) >>= constructors
+  typeKey *> (typeDefinition <* arguments <* equalSign) >>= constructors
   where
     typeKey = (try $ string "type") *> whitespace1
     equalSign = whitespace *> char '=' *> whitespace

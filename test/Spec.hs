@@ -75,8 +75,8 @@ sumTypeTests =
         [typeConstructor "Foo" "Bar" 1 12]
     , t
         "with type parameters"
-        "type Foo = Bar a | Baz one (Maybe Int)"
-        [typeConstructor "Foo" "Bar" 1 12, typeConstructor "Foo" "Baz" 1 20]
+        "type Foo a (Maybe c) = Bar a | Baz one (Maybe Int)"
+        [typeConstructor "Foo" "Bar" 1 24, typeConstructor "Foo" "Baz" 1 32]
     ]
 
 typeAliasTests :: TestTree
