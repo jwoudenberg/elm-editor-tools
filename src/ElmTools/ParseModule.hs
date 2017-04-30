@@ -66,23 +66,17 @@ declarations = do
 
 line_ :: DefParser [Declaration]
 line_ = do
-  (option [] declaration) <* restOfLine
-    -- I'd prefer not to have to `try` each definition parser here, but I don't see I have any choice.
-    -- When a syntax error is encountered, I don't want to abort parsing, but continue on to the next definition.
-    -- As far as I know, parsec offers no way to recover from parsers that failed after consuming input.
-    -- TODO: make try more specific: if you start out reading 'type', you know it's never a function definition.
+  (try $ option [] declaration) <* restOfLine
   where
-    declaration = choice (fmap try declarationParsers)
-
-declarationParsers :: [DefParser [Declaration]]
-declarationParsers =
-  [ moduleDefinition *> pure []
-  , pure <$> Import <$> importStatement
-  , pure <$> Definition <$> typeAlias
-  , fmap Definition <$> sumType
-  , fmap Definition <$> destructuredAssignment
-  , pure <$> Definition <$> topFunction
-  ]
+    declaration =
+      choice
+        [ moduleDefinition *> pure []
+        , pure <$> Import <$> importStatement
+        , pure <$> Definition <$> typeAlias
+        , fmap Definition <$> sumType
+        , fmap Definition <$> destructuredAssignment
+        , pure <$> Definition <$> topFunction
+        ]
 
 restOfLine :: DefParser ()
 restOfLine = dump $ manyTill (try comment <|> dump anyChar) endOfFileOrLine
@@ -100,7 +94,7 @@ commentBlockEnd = eof <|> dump (string "-}")
 moduleDefinition :: DefParser ()
 moduleDefinition = do
   exportedNames' <-
-    string "module" *> whitespace1 *> moduleName *> whitespace1 *>
+    (try $ string "module") *> whitespace1 *> moduleName *> whitespace1 *>
     string "exposing" *>
     whitespace1 *>
     exposedList
@@ -125,7 +119,7 @@ definition definitionType' location' name' = do
   return $ DefinitionC definitionType' scope' location' name'
 
 destructuredAssignment :: DefParser [Definition]
-destructuredAssignment = destructuredContent <* whitespace <* char '='
+destructuredAssignment = try $ destructuredContent <* whitespace <* char '='
 
 destructuredContent :: DefParser [Definition]
 destructuredContent =
@@ -138,7 +132,8 @@ destructuredTuple :: DefParser [Definition]
 destructuredTuple = inBraces $ join <$> sepBy destructuredContent (try comma)
 
 topFunction :: DefParser Definition
-topFunction = infixOperator <|> variable <* whitespace <* arguments <* char '='
+topFunction =
+  try $ infixOperator <|> variable <* whitespace <* arguments <* char '='
 
 variable :: DefParser Definition
 variable = join $ (definition Function) <$> getLocation <*> lowerCasedWord
@@ -148,7 +143,7 @@ sumType :: DefParser [Definition]
 sumType = do
   typeKey *> (typeDefinition <* equalSign) >>= constructors
   where
-    typeKey = string "type" *> whitespace1
+    typeKey = (try $ string "type") *> whitespace1
     equalSign = whitespace *> char '=' *> whitespace
     constructors typeName =
       sepBy
@@ -159,7 +154,7 @@ importStatement :: DefParser Import
 importStatement =
   importKey *> (pure importDef) <*> moduleName <*> asClause <*> exposingClause
   where
-    importKey = string "import" *> whitespace1
+    importKey = (try $ string "import") *> whitespace1
     asClause =
       optionMaybe $
       try $ whitespace1 *> string "as" *> whitespace1 *> capitalizedWord
@@ -178,7 +173,7 @@ typeAlias = do
   join $ (definition TypeAlias) <$> getLocation <*> capitalizedWord
   where
     typeAliasKeyword =
-      string "type" >> whitespace1 >> string "alias" >> whitespace1
+      (try $ string "type" *> whitespace1 *> string "alias") *> whitespace1
 
 typeDefinition :: DefParser String
 typeDefinition = do
