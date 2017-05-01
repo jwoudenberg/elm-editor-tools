@@ -1,15 +1,13 @@
 module ElmTools.ParseModule
   ( elmParser
   , parseString
-  , findDefinition
   ) where
 
 import Control.Monad (join)
 import Data.List
 import Data.List.Split (splitOn)
-import Data.Maybe (mapMaybe, fromMaybe)
+import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
-import ElmTools.Error
 import ElmTools.ParseModule.Types
 import Text.Parsec
 import Text.Parsec.Indent
@@ -19,32 +17,6 @@ type DefParser result = IndentParser String ParseState result
 data ParseState = ParseState
   { exportedNames :: ExposedNames
   }
-
-findDefinition :: FilePath -> String -> IO (Either Error Definition)
-findDefinition filePath name' = do
-  parseResult <- elmParser filePath
-  return $ do
-    decs <- mapLeft (CouldNotParseElmModule filePath . show) parseResult
-    let defs = mapMaybe getDef decs
-    findDef name' defs
-
-getDef :: Declaration -> Maybe Definition
-getDef declaration =
-  case declaration of
-    Definition def -> Just def
-    Import _ -> Nothing
-
-mapLeft :: (a -> b) -> Either a c -> Either b c
-mapLeft fn either_ =
-  case either_ of
-    Left x -> Left (fn x)
-    Right y -> Right y
-
-findDef :: String -> [Definition] -> Either Error Definition
-findDef name' defs =
-  case find ((==) name' . name) defs of
-    Nothing -> Left (CouldNotFindDefinition name')
-    Just def -> Right def
 
 elmParser :: FilePath -> IO (Either ParseError [Declaration])
 elmParser filePath = do
