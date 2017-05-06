@@ -36,7 +36,7 @@ topLevelFunctionTests =
         "tailing content"
         "foo = 42 and some more stuff\nanother line"
         [fn "foo" 1 1]
-    , t "infix operator" "(<>) = something" [fn "<>" 1 2]
+    , t "infix operator" "(<>) = something" [fn "<>" 1 1]
     , t
         "destructured record"
         "{ foo, bar } = something"
@@ -182,6 +182,10 @@ importTests =
         "broken across lines"
         "import Foo.Bar exposing\n (\n One, two)"
         [imprt "Foo.Bar" "Foo.Bar" (selected ["One", "two"])]
+    , t
+        "infix operators"
+        "import Foo.Bar exposing ((?))"
+        [imprt "Foo.Bar" "Foo.Bar" (selected ["?"])]
     ]
 
 exportTests :: TestTree
@@ -205,6 +209,10 @@ exportTests =
         "exporting all type constructors"
         "module Foo exposing (Foo(..))\ntype Foo = Bar | Baz"
         ["Bar", "Baz"]
+    , testExport
+        "infix operators"
+        "module Foo exposing ((?))\n(?) a b = a"
+        ["?"]
     ]
 
 fn :: String -> Int -> Int -> Declaration

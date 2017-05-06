@@ -193,7 +193,9 @@ exposedList =
       (inBraces $ sepBy exposedValue (try comma))
     ]
   where
-    exposedValue = exposedSumType <|> pure <$> lowerCasedWord
+    exposedValue =
+      choice
+        [exposedSumType, pure <$> lowerCasedWord, pure <$> inBraces operator]
 
 exposedSumType :: DefParser [String]
 exposedSumType =
@@ -213,12 +215,11 @@ exposeAll :: DefParser String
 exposeAll = inBraces (string "..") *> pure "(..)"
 
 infixOperator :: DefParser Definition
-infixOperator = inBraces operator
+infixOperator =
+  join $ (definition Function) <$> getLocation <*> inBraces operator
 
-operator :: DefParser Definition
-operator =
-  join $
-  (definition Function) <$> getLocation <*> many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
+operator :: DefParser String
+operator = many1 (oneOf "+-/*=.$<>:&|^?%#@~!")
 
 -- I'm not interested in parsing arguments at this moment, except to know when the argument list is over.
 arguments :: DefParser ()
