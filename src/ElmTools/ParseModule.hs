@@ -61,7 +61,7 @@ commentContentsAndEnd =
   dump $ manyTill (try comment <|> dump anyChar) commentBlockEnd
 
 commentBlockEnd :: DefParser ()
-commentBlockEnd = eof <|> dump (string "-}")
+commentBlockEnd = eof <|> dump (try $ string "-}")
 
 moduleDefinition :: DefParser ()
 moduleDefinition = do

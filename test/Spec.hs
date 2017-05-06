@@ -150,6 +150,7 @@ commentTests =
         [fn "foo" 2 1]
     , t "comment until end of file" "{-\nfoo = 42" []
     , t "nested comment blocks" "{-{--}\nfoo = 42-}" []
+    , t "comments with hyphens" "{- -\ntype of-}" []
     ]
 
 importTests :: TestTree
