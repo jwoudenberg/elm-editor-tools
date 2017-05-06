@@ -173,13 +173,13 @@ getLocation = do
 lowerCasedWord :: DefParser String
 lowerCasedWord = do
   initial <- lower
-  rest <- many letter
+  rest <- many alphaNum
   return (initial : rest)
 
 capitalizedWord :: DefParser String
 capitalizedWord = do
   initial <- upper
-  rest <- many letter
+  rest <- many alphaNum
   return (initial : rest)
 
 moduleName :: DefParser String

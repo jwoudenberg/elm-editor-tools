@@ -26,6 +26,7 @@ topLevelFunctionTests =
   testGroup
     "top level functions"
     [ t "top level function" "foo = 42" [fn "foo" 1 1]
+    , t "with numbers in name" "foo2 = 42" [fn "foo2" 1 1]
     , t "with arguments" "foo (One thing) { field } int = 42" [fn "foo" 1 1]
     , t "no whitespace" "foo=42" [fn "foo" 1 1]
     , t "much whitespace" "foo   =\t42" [fn "foo" 1 1]
@@ -56,6 +57,10 @@ sumTypeTests =
     "sum types"
     [ t "sum type" "type Foo = Bar" [typeConstructor "Foo" "Bar" 1 12]
     , t
+        "with numbers in name"
+        "type Foo2 = Bar2"
+        [typeConstructor "Foo2" "Bar2" 1 13]
+    , t
         "with multiple type constructors"
         "type Foo = Bar | Baz"
         [typeConstructor "Foo" "Bar" 1 12, typeConstructor "Foo" "Baz" 1 18]
@@ -84,6 +89,7 @@ typeAliasTests =
   testGroup
     "type aliases"
     [ t "type alias" "type alias Foo = Bar" [typeAlias "Foo" 1 12]
+    , t "with numbers in name" "type alias Foo2 = Bar2" [typeAlias "Foo2" 1 12]
     , t "much whitespace" "type  alias  Foo  =  Bar" [typeAlias "Foo" 1 14]
     , t
         "broken across lines"
