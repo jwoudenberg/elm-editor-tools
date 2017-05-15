@@ -22,6 +22,7 @@ library
                      , ElmTools.Error
                      , ElmTools.ParseConfig
                      , ElmTools.FindDefinition
+  other-modules:       Strategy
   build-depends:       base >= 4.7 && < 5
                      , parsec >= 3.1 && < 4
                      , indents >= 0.4.0.0 && < 0.5

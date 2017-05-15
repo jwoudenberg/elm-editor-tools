@@ -24,21 +24,11 @@ import ElmTools.ParseConfig
        (ElmJSON(sourceDirectories), DepsJSON, readElmJSON, readDepsJSON)
 import Path
 import Path.IO
+import Strategy (Strategy, choice, (<|>))
 
 type App a = ExceptT Error IO a
 
-newtype Candidate =
-  Candidate (IO (Maybe (Path Abs File)))
-
-instance Monoid Candidate where
-  mempty = Candidate $ pure Nothing
-  mappend (Candidate current) (Candidate next) =
-    Candidate $ do
-      maybePath <- current
-      -- Stop working the moment you find a working candidate.
-      case maybePath of
-        Just path -> pure (Just path)
-        Nothing -> next
+type Candidate = Strategy (Path Abs File)
 
 resolveModule :: FilePath -> String -> IO (Either Error FilePath)
 resolveModule importedFromFile moduleName =
@@ -48,7 +38,7 @@ resolveModule importedFromFile moduleName =
     let projectRoot = findProjectRoot localRoot
     let projectCandidate = candidateInRoot relModulePath localRoot
     let allDepsCandidate = depsCandidate relModulePath projectRoot
-    candidatePath <- (liftA2 mappend) projectCandidate allDepsCandidate
+    candidatePath <- (liftA2 (<|>)) projectCandidate allDepsCandidate
     finalPath <- runCandidate candidatePath
     return (toFilePath finalPath)
 
@@ -58,23 +48,23 @@ candidateInRoot relModulePath rootDir = do
   pure (candidateInSourceDirs relModulePath sourceDirs)
 
 candidateInSourceDirs :: Path Rel File -> [Path Abs Dir] -> Candidate
-candidateInSourceDirs relModulePath sourceDirs = foldMap candidate moduleDirs
+candidateInSourceDirs relModulePath sourceDirs = choice candidates
   where
-    moduleDirs = fmap (\source -> source </> relModulePath) sourceDirs
+    fullPath source = source </> relModulePath
+    candidates = fmap (candidate . fullPath) sourceDirs
 
 runCandidate :: Candidate -> App (Path Abs File)
-runCandidate (Candidate candidatePath) =
+runCandidate candidate' =
   ExceptT $ do
-    maybePath <- candidatePath
-    return $ maybe (Left CouldNotFindModule) pure maybePath
+    path <- candidate'
+    return $ maybe (Left CouldNotFindModule) pure path
 
 candidate :: Path Abs File -> Candidate
-candidate filePath =
-  Candidate $ do
-    exists <- doesFileExist filePath
-    if exists
-      then return (Just filePath)
-      else return Nothing
+candidate filePath = do
+  exists <- doesFileExist filePath
+  if exists
+    then return (Just filePath)
+    else return Nothing
 
 getSourceDirs :: Path Abs Dir -> App [Path Abs Dir]
 getSourceDirs localRoot = do
@@ -118,7 +108,7 @@ depsCandidate :: Path Rel File -> Path Abs Dir -> App Candidate
 depsCandidate relModulePath projectRoot = do
   deps <- depPaths projectRoot
   candidates <- traverse (candidateInRoot relModulePath) deps
-  return (mconcat candidates)
+  return (choice candidates)
 
 depPaths :: Path Abs Dir -> App [Path Abs Dir]
 depPaths projectRoot = do
