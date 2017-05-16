@@ -162,7 +162,7 @@ importTests =
     , t
         "exposing"
         "import Foo.Bar exposing (One, two)"
-        [imprt "Foo.Bar" "Foo.Bar" (selected ["One", "two"])]
+        [imprt "Foo.Bar" "Foo.Bar" (selected [Tipe "One", NonTipe "two"])]
     , t
         "exposing everything"
         "import Foo.Bar exposing (..)"
@@ -170,23 +170,31 @@ importTests =
     , t
         "exposing some sum type constructors"
         "import Foo.Bar exposing (One(Two))"
-        [imprt "Foo.Bar" "Foo.Bar" (selected ["One.Two"])]
+        [ imprt
+            "Foo.Bar"
+            "Foo.Bar"
+            (selected [TipeWithSingleConstructor "One" "Two"])
+        ]
     , t
         "exposing all sum type constructors"
         "import Foo.Bar exposing (One(..))"
-        [imprt "Foo.Bar" "Foo.Bar" (selected ["One(..)"])]
+        [imprt "Foo.Bar" "Foo.Bar" (selected [TipeWithConstructors "One"])]
     , t
         "much whitespace"
         "import    Foo.Bar  \tas    Bar    exposing   ( One  ,  Two ( Three ) )"
-        [imprt "Foo.Bar" "Bar" (selected ["One", "Two.Three"])]
+        [ imprt
+            "Foo.Bar"
+            "Bar"
+            (selected [Tipe "One", TipeWithSingleConstructor "Two" "Three"])
+        ]
     , t
         "broken across lines"
         "import Foo.Bar exposing\n (\n One, two)"
-        [imprt "Foo.Bar" "Foo.Bar" (selected ["One", "two"])]
+        [imprt "Foo.Bar" "Foo.Bar" (selected [Tipe "One", NonTipe "two"])]
     , t
         "infix operators"
         "import Foo.Bar exposing ((?))"
-        [imprt "Foo.Bar" "Foo.Bar" (selected ["?"])]
+        [imprt "Foo.Bar" "Foo.Bar" (selected [NonTipe "?"])]
     ]
 
 exportTests :: TestTree
@@ -265,5 +273,5 @@ exportedDef declaration =
 exportedNames :: [Declaration] -> Set.Set String
 exportedNames = Set.fromList . fmap name . mapMaybe exportedDef
 
-selected :: [String] -> ExposedNames
+selected :: [ExposedName] -> ExposedNames
 selected = Selected . Set.fromList

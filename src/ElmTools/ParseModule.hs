@@ -80,12 +80,13 @@ definition definitionType' location' name' = do
         case (exportedNames', definitionType') of
           (All, _) -> Exported
           (Selected exported, TypeConstructor typeName) ->
-            if (Set.member (typeName ++ "(..)") exported) ||
-               (Set.member (typeName ++ "." ++ name') exported)
+            if (Set.member (TipeWithConstructors typeName) exported) ||
+               (Set.member (TipeWithSingleConstructor typeName name') exported)
               then Exported
               else Global
           (Selected exported, _) ->
-            if Set.member name' exported
+            if (Set.member (NonTipe name') exported) ||
+               (Set.member (Tipe name') exported)
               then Exported
               else Global
   return $ DefinitionC definitionType' scope' location' name'
@@ -195,21 +196,24 @@ exposedList =
   where
     exposedValue =
       choice
-        [exposedSumType, pure <$> lowerCasedWord, pure <$> inBraces operator]
+        [ exposedSumType
+        , pure <$> NonTipe <$> lowerCasedWord
+        , pure <$> NonTipe <$> inBraces operator
+        ]
 
-exposedSumType :: DefParser [String]
+exposedSumType :: DefParser [ExposedName]
 exposedSumType =
   choice $
   fmap
     try
-    [ (fmap . joinWithDot) <$> (capitalizedWord <* whitespace) <*>
+    [ (fmap . TipeWithSingleConstructor) <$> (capitalizedWord <* whitespace) <*>
       exposedConstructors
-    , pure <$> (pure (++) <*> capitalizedWord <* whitespace <*> exposeAll)
-    , pure <$> capitalizedWord
+    , pure <$>
+      (pure TipeWithConstructors <*> capitalizedWord <* whitespace <* exposeAll)
+    , pure <$> Tipe <$> capitalizedWord
     ]
   where
     exposedConstructors = inBraces (sepBy capitalizedWord (try comma))
-    joinWithDot a b = a ++ "." ++ b
 
 exposeAll :: DefParser String
 exposeAll = inBraces (string "..") *> pure "(..)"

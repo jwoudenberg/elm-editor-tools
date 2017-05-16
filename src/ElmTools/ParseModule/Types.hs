@@ -51,5 +51,13 @@ data Import = ImportC
 
 data ExposedNames
   = All
-  | Selected (Set String)
+  | Selected (Set ExposedName)
   deriving (Show, Eq)
+
+data ExposedName
+  = TipeWithConstructors String
+  | TipeWithSingleConstructor String
+                              String
+  | Tipe String
+  | NonTipe String
+  deriving (Show, Eq, Ord)
